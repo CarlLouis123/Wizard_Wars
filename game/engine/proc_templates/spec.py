@@ -1,4 +1,5 @@
-\
+"""Validation helpers for procedural template specifications."""
+
 from typing import Any, Dict, List, Tuple, Union
 class TemplateError(Exception): pass
 Color = Union[List[int], Tuple[int,int,int], str]

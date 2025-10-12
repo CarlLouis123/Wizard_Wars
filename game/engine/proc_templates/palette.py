@@ -1,4 +1,5 @@
-\
+"""Basic named colour palette helpers."""
+
 from typing import Tuple
 NAMED = {
     "WHITE": (255,255,255), "BLACK": (0,0,0), "GRAY": (120,120,120), "DARK": (40,40,40),
