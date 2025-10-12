@@ -33,8 +33,10 @@ class DialogueEngine:
 
         key = CFG.get_api_key()
         if not key:
+            CFG.log_error("Missing API key for Gemini request.")
             return "[Gemini] Missing API key. Put it in config/api_key.txt or set GOOGLE_API_KEY. " + self._local(npc_prompt)
 
+        response = None
         try:
             url = f"{CFG.MODEL_ENDPOINT}?key={key}"
             body = {
@@ -54,6 +56,12 @@ class DialogueEngine:
             text = self._extract_text(data.get("candidates", []))
             return text or self._local(npc_prompt)
         except Exception as exc:  # noqa: BLE001 - surface the failure to the player
+            extra = ""
+            if response is not None:
+                extra = f" | status={response.status_code} body={response.text[:500]!r}"
+            CFG.log_error(
+                f"Gemini request failed: {exc} | prompt={npc_prompt!r}{extra}"
+            )
             return f"[Gemini error: {exc}] " + self._local(npc_prompt)
 
     @staticmethod
