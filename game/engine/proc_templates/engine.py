@@ -1,4 +1,5 @@
-\
+"""Procedural texture renderer used by the template system."""
+
 import pygame as pg, math, random
 from typing import Dict, Any
 from .spec import validate_template, TemplateError, _subst
