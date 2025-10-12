@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from concurrent.futures import Future, ThreadPoolExecutor
 import sys
+from threading import Lock
 from pathlib import Path
-from typing import Iterable, List
+from typing import Dict, Iterable, List
 
 import requests
 from requests import exceptions as req_exc
@@ -26,12 +28,72 @@ class DialogueEngine:
     def __init__(self, use_gemini: bool = False, model_name: str = "gemini-2.5-pro"):
         self.use_gemini = use_gemini
         self.model_name = model_name
+        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="gemini")
+        self._lock = Lock()
+        self._cache: Dict[str, str] = {}
+        self._futures: Dict[str, Future[str]] = {}
+
+    def prewarm(self, prompts: Iterable[str]) -> None:
+        """Kick off background Gemini requests for the provided prompts."""
+
+        if not self.use_gemini:
+            return
+
+        for prompt in prompts:
+            clean_prompt = (prompt or "Say hi.").strip()
+            with self._lock:
+                if clean_prompt in self._cache or clean_prompt in self._futures:
+                    continue
+                future = self._executor.submit(self._fetch_gemini, clean_prompt)
+                self._futures[clean_prompt] = future
+                future.add_done_callback(lambda fut, key=clean_prompt: self._store_future(key, fut))
 
     def npc_line(self, npc_prompt: str) -> str:
         npc_prompt = (npc_prompt or "Say hi.").strip()
         if not self.use_gemini:
             return self._local(npc_prompt)
 
+        with self._lock:
+            cached = self._cache.get(npc_prompt)
+            future = self._futures.get(npc_prompt)
+
+        if cached is not None:
+            return cached
+
+        if future is None:
+            future = self._submit_prompt(npc_prompt)
+
+        if future.done():
+            try:
+                result = future.result()
+            except Exception as exc:  # noqa: BLE001 - captured and logged in _fetch_gemini
+                result = f"[Gemini error: {exc}] " + self._local(npc_prompt)
+            with self._lock:
+                self._cache[npc_prompt] = result
+                self._futures.pop(npc_prompt, None)
+            return result
+
+        return "[Gemini channeling...] " + self._local(npc_prompt)
+
+    def _submit_prompt(self, prompt: str) -> Future[str]:
+        with self._lock:
+            future = self._futures.get(prompt)
+            if future is None:
+                future = self._executor.submit(self._fetch_gemini, prompt)
+                self._futures[prompt] = future
+                future.add_done_callback(lambda fut, key=prompt: self._store_future(key, fut))
+            return future
+
+    def _store_future(self, prompt: str, future: Future[str]) -> None:
+        try:
+            result = future.result()
+        except Exception:
+            return
+        with self._lock:
+            self._cache[prompt] = result
+            self._futures.pop(prompt, None)
+
+    def _fetch_gemini(self, npc_prompt: str) -> str:
         key = CFG.get_api_key()
         if not key:
             CFG.log_error("Missing API key for Gemini request.")
