@@ -44,7 +44,7 @@ class NPC(Entity):
         y: float,
         tile_size: int,
         tpl_path: str | Path,
-        prompt: str = "Share a short tip.",
+        prompt: str = "Offer a wizardly insight.",
     ):
         tpl = _load_template(tpl_path)
         surf = render_template_to_surface(tpl)

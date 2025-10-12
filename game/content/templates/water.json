@@ -1,29 +1,36 @@
 {
   "version": 1,
   "type": "texture",
-  "name": "water",
+  "name": "aether",
   "size": [
     32,
     32
   ],
   "palette": [
-    "WATER"
+    "#0a1426",
+    "#14577f",
+    "#6ff2ff"
   ],
   "layers": [
     {
-      "op": "fill",
-      "color": "WATER"
+      "op": "gradient_linear",
+      "axis": "y",
+      "color1": "#0a1323",
+      "color2": "#123b56"
     },
     {
       "op": "noise",
-      "scale": 10,
-      "alpha": 0.45,
-      "color1": [
-        120,
-        170,
-        220
-      ],
-      "color2": "WATER"
+      "scale": 12,
+      "alpha": 0.55,
+      "color1": "#2bd3ff",
+      "color2": "#0c3b70"
+    },
+    {
+      "op": "dots",
+      "count": 36,
+      "radius": 1,
+      "color": "#9df7ff",
+      "alpha": 0.25
     }
   ]
 }

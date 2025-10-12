@@ -1,30 +1,37 @@
 {
   "version": 1,
   "type": "texture",
-  "name": "sand",
+  "name": "runestone",
   "size": [
     32,
     32
   ],
   "palette": [
-    "SAND"
+    "#2d2443",
+    "#564989",
+    "#afa0ff"
   ],
   "layers": [
     {
-      "op": "fill",
-      "color": "SAND"
+      "op": "gradient_linear",
+      "axis": "y",
+      "color1": "#231c3a",
+      "color2": "#120f24"
     },
     {
       "op": "stripes",
-      "orientation": "h",
-      "gap": 4,
+      "orientation": "v",
+      "gap": 6,
       "width": 1,
-      "color": [
-        210,
-        180,
-        120
-      ],
-      "alpha": 0.6
+      "color": "#433671",
+      "alpha": 0.5
+    },
+    {
+      "op": "dots",
+      "count": 40,
+      "radius": 1,
+      "color": "#c8beff",
+      "alpha": 0.3
     }
   ]
 }

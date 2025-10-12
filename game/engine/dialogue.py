@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Iterable, List
 
 import requests
+from requests import exceptions as req_exc
 
 
 # When the game is launched via ``python game/main.py`` the repository root is
@@ -44,17 +45,30 @@ class DialogueEngine:
                     {
                         "parts": [
                             {
-                                "text": f"You are an NPC in a cozy top-down RPG. {npc_prompt}"
+                                "text": (
+                                    "You are an ancient archwizard speaking inside the minimalist "
+                                    "dueling sanctum of WizardWars. Offer a brief, original piece "
+                                    "of clever magical counsel in at most two sentences. Let your "
+                                    "tone carry the wonder of epic fantasy sagas like the Wheel of "
+                                    "Time, The Lord of the Rings, and Harry Potter without quoting "
+                                    "or plagiarising them. "
+                                    f"{npc_prompt}"
+                                )
                             }
                         ]
                     }
                 ]
             }
-            response = requests.post(url, json=body, timeout=10)
+            response = requests.post(url, json=body, timeout=(5, 30))
             response.raise_for_status()
             data = response.json()
             text = self._extract_text(data.get("candidates", []))
             return text or self._local(npc_prompt)
+        except req_exc.Timeout as exc:
+            CFG.log_error(
+                f"Gemini request failed: {exc} (timeout) | prompt={npc_prompt!r}"
+            )
+            return "[Gemini timeout] " + self._local(npc_prompt)
         except Exception as exc:  # noqa: BLE001 - surface the failure to the player
             extra = ""
             if response is not None:
@@ -75,9 +89,9 @@ class DialogueEngine:
 
     def _local(self, prompt: str) -> str:
         local_lines = [
-            "If you get lost, follow the river.",
-            "Press 'E' to talk and 'G' for clever mode.",
-            "The shopkeeper loves blue berries.",
-            "Treasure lies past the old bridge.",
+            "We duel with insight long before the first spark of mana.",
+            "Even a whisper of focus can bend the weave of battle.",
+            "A staff is only a reminder; the storm lives in your calm.",
+            "When the moonlight pivots, step sideways through possibility.",
         ]
         return local_lines[sum(ord(c) for c in prompt) % len(local_lines)]

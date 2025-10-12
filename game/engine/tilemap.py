@@ -47,14 +47,14 @@ class TileMap:
         for y in range(self.h):
             for x in range(self.w):
                 roll = random.random()
-                if roll < 0.10:
+                if roll < 0.08:
                     self.base[y][x] = T_WATER
-                elif roll < 0.25:
+                elif roll < 0.20:
                     self.base[y][x] = T_SAND
                 else:
                     self.base[y][x] = T_GRASS
 
-                if self.base[y][x] == T_GRASS and random.random() < 0.06:
+                if self.base[y][x] == T_GRASS and random.random() < 0.05:
                     self.deco[y][x] = T_TREE
 
     def walkable(self, tx: int, ty: int) -> bool:
