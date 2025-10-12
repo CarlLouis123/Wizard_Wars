@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "type": "sprite",
+  "name": "tree",
+  "size": [
+    32,
+    32
+  ],
+  "layers": [
+    {
+      "op": "blobs",
+      "count": 1,
+      "radius": 12,
+      "jitter": 0.25,
+      "color": [
+        34,
+        139,
+        94
+      ]
+    },
+    {
+      "op": "blobs",
+      "count": 1,
+      "radius": 10,
+      "jitter": 0.15,
+      "color": [
+        25,
+        120,
+        80
+      ],
+      "alpha": 0.9
+    },
+    {
+      "op": "outline_rect",
+      "x": 14,
+      "y": 22,
+      "w": 4,
+      "h": 8,
+      "thickness": 0,
+      "color": [
+        130,
+        90,
+        50
+      ]
+    }
+  ]
+}

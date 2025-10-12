@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "sand",
+  "size": [
+    32,
+    32
+  ],
+  "palette": [
+    "SAND"
+  ],
+  "layers": [
+    {
+      "op": "fill",
+      "color": "SAND"
+    },
+    {
+      "op": "stripes",
+      "orientation": "h",
+      "gap": 4,
+      "width": 1,
+      "color": [
+        210,
+        180,
+        120
+      ],
+      "alpha": 0.6
+    }
+  ]
+}

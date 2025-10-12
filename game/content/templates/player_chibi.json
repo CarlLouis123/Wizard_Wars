@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "type": "sprite",
+  "name": "player_chibi",
+  "size": [
+    28,
+    28
+  ],
+  "layers": [
+    {
+      "op": "sprite_chibi",
+      "shirt": "ROOF_BLUE",
+      "pants": "BLACK",
+      "skin": [
+        238,
+        207,
+        161
+      ],
+      "hat": true
+    }
+  ]
+}

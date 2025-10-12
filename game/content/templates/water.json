@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "water",
+  "size": [
+    32,
+    32
+  ],
+  "palette": [
+    "WATER"
+  ],
+  "layers": [
+    {
+      "op": "fill",
+      "color": "WATER"
+    },
+    {
+      "op": "noise",
+      "scale": 10,
+      "alpha": 0.45,
+      "color1": [
+        120,
+        170,
+        220
+      ],
+      "color2": "WATER"
+    }
+  ]
+}

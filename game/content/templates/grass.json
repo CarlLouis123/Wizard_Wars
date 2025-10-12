@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "grass",
+  "size": [
+    32,
+    32
+  ],
+  "palette": [
+    "FOREST"
+  ],
+  "layers": [
+    {
+      "op": "fill",
+      "color": "FOREST"
+    },
+    {
+      "op": "noise",
+      "scale": 16,
+      "alpha": 0.25,
+      "color1": "FOREST",
+      "color2": [
+        50,
+        150,
+        80
+      ]
+    },
+    {
+      "op": "dots",
+      "count": 90,
+      "radius": 1,
+      "color": [
+        30,
+        90,
+        50
+      ],
+      "alpha": 0.55
+    }
+  ]
+}
