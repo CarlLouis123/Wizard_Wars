@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "astral_void",
+  "size": [32, 32],
+  "palette": ["#050009", "#170028", "#5f00ff"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#010006", "color2": "#120021"},
+    {"op": "dots", "count": 18, "radius": 1, "color": "#b87cff", "alpha": 0.7},
+    {"op": "noise", "scale": 22, "alpha": 0.3, "color1": "#21004a", "color2": "#090012"}
+  ]
+}

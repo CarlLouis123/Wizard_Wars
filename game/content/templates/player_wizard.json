@@ -1,0 +1,14 @@
+{
+  "id": "player_wizard",
+  "sprite_template": "player_chibi.json",
+  "stats": {
+    "health": 100,
+    "mana": 150,
+    "speed_tiles_per_second": 3.5
+  },
+  "spells": ["spark", "barrier", "blink", "fireball"],
+  "inventory": {
+    "slots": 10,
+    "items": ["mana_crystal", "fire_essence"]
+  }
+}

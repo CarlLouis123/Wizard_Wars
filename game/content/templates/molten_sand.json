@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "molten_sand",
+  "size": [32, 32],
+  "palette": ["#3b1a12", "#7a2d13", "#f2994a"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#2a130c", "color2": "#7d3319"},
+    {"op": "noise", "scale": 14, "alpha": 0.55, "color1": "#c06428", "color2": "#40160f"},
+    {"op": "stripes", "orientation": "h", "gap": 8, "width": 1, "color": "#f2994a", "alpha": 0.35}
+  ]
+}

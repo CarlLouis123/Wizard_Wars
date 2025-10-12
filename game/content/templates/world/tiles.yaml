@@ -1,0 +1,63 @@
+ground_tiles:
+  - id: arcane_grass
+    template: arcane_grass.json
+    walkable: true
+  - id: arcane_ruins
+    template: arcane_ruins.json
+    walkable: true
+  - id: arcane_water
+    template: arcane_water.json
+    walkable: false
+  - id: molten_sand
+    template: molten_sand.json
+    walkable: true
+  - id: molten_crust
+    template: molten_crust.json
+    walkable: true
+  - id: molten_lava
+    template: molten_lava.json
+    walkable: false
+  - id: frost_snow
+    template: frost_snow.json
+    walkable: true
+  - id: frost_ice
+    template: frost_ice.json
+    walkable: false
+  - id: frost_lake
+    template: frost_lake.json
+    walkable: false
+  - id: marsh_mire
+    template: marsh_mire.json
+    walkable: true
+  - id: marsh_pool
+    template: marsh_pool.json
+    walkable: false
+  - id: marsh_path
+    template: marsh_path.json
+    walkable: true
+  - id: astral_tile
+    template: astral_tile.json
+    walkable: true
+  - id: astral_void
+    template: astral_void.json
+    walkable: false
+  - id: astral_bridge
+    template: astral_bridge.json
+    walkable: true
+
+decor_tiles:
+  - id: arcane_tree
+    template: arcane_tree.json
+    offset: [0, -10]
+  - id: molten_fumarole
+    template: molten_fumarole.json
+    offset: [0, -8]
+  - id: frost_pillar
+    template: frost_pillar.json
+    offset: [0, -12]
+  - id: marsh_shroom
+    template: marsh_shroom.json
+    offset: [0, -6]
+  - id: astral_obelisk
+    template: astral_obelisk.json
+    offset: [0, -14]

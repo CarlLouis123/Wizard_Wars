@@ -1,0 +1,6 @@
+{
+  "id": "frozen_oracle",
+  "phase_1": {"attack": "ice_lance", "cooldown": 4},
+  "phase_2": {"attack": "predictive_freeze", "cooldown": 6},
+  "phase_3": {"summon": "frost_barrier", "count": 2}
+}

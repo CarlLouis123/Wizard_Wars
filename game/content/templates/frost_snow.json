@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "frost_snow",
+  "size": [32, 32],
+  "palette": ["#0c1f33", "#1f3b5c", "#9ddaff"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#071625", "color2": "#15304a"},
+    {"op": "noise", "scale": 16, "alpha": 0.45, "color1": "#3e6a8a", "color2": "#0d2236"},
+    {"op": "dots", "count": 60, "radius": 1, "color": "#eaf7ff", "alpha": 0.4}
+  ]
+}

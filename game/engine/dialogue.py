@@ -1,4 +1,4 @@
-"""Gemini-backed dialogue helper used by the PokeLike demo game."""
+"""Gemini-backed dialogue helper used by the Wizard Wars sandbox."""
 
 from __future__ import annotations
 
@@ -48,10 +48,10 @@ class DialogueEngine:
                 self._futures[clean_prompt] = future
                 future.add_done_callback(lambda fut, key=clean_prompt: self._store_future(key, fut))
 
-    def npc_line(self, npc_prompt: str) -> str:
+    def npc_line(self, npc_prompt: str, fallback: Iterable[str] | None = None) -> str:
         npc_prompt = (npc_prompt or "Say hi.").strip()
         if not self.use_gemini:
-            return self._local(npc_prompt)
+            return self._local(npc_prompt, fallback)
 
         with self._lock:
             cached = self._cache.get(npc_prompt)
@@ -67,13 +67,13 @@ class DialogueEngine:
             try:
                 result = future.result()
             except Exception as exc:  # noqa: BLE001 - captured and logged in _fetch_gemini
-                result = f"[Gemini error: {exc}] " + self._local(npc_prompt)
+                result = f"[Gemini error: {exc}] " + self._local(npc_prompt, fallback)
             with self._lock:
                 self._cache[npc_prompt] = result
                 self._futures.pop(npc_prompt, None)
             return result
 
-        return "[Gemini channeling...] " + self._local(npc_prompt)
+        return "[Gemini channeling...] " + self._local(npc_prompt, fallback)
 
     def _submit_prompt(self, prompt: str) -> Future[str]:
         with self._lock:
@@ -149,11 +149,15 @@ class DialogueEngine:
                 return " ".join(texts)
         return ""
 
-    def _local(self, prompt: str) -> str:
-        local_lines = [
-            "We duel with insight long before the first spark of mana.",
-            "Even a whisper of focus can bend the weave of battle.",
-            "A staff is only a reminder; the storm lives in your calm.",
-            "When the moonlight pivots, step sideways through possibility.",
-        ]
-        return local_lines[sum(ord(c) for c in prompt) % len(local_lines)]
+    def _local(self, prompt: str, fallback: Iterable[str] | None = None) -> str:
+        lines: List[str] = []
+        if fallback:
+            lines.extend(line for line in fallback if isinstance(line, str) and line.strip())
+        if not lines:
+            lines = [
+                "We duel with insight long before the first spark of mana.",
+                "Even a whisper of focus can bend the weave of battle.",
+                "A staff is only a reminder; the storm lives in your calm.",
+                "When the moonlight pivots, step sideways through possibility.",
+            ]
+        return lines[sum(ord(c) for c in prompt) % len(lines)]

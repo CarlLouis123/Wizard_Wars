@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "type": "sprite",
+  "name": "arcane_tree",
+  "size": [28, 44],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#281b46", "color2": "#43346d"},
+    {"op": "blobs", "count": 6, "radius": 10, "color": "#7be7ff", "alpha": 0.55},
+    {"op": "dots", "count": 40, "radius": 1, "color": "#b8ffff", "alpha": 0.5}
+  ]
+}

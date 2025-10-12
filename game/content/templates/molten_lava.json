@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "molten_lava",
+  "size": [32, 32],
+  "palette": ["#2b0700", "#990f02", "#ff6633"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#1a0400", "color2": "#7d0c02"},
+    {"op": "stripes", "orientation": "v", "gap": 6, "width": 2, "color": "#ff3000", "alpha": 0.55},
+    {"op": "dots", "count": 30, "radius": 2, "color": "#ff8a3d", "alpha": 0.45}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "frost_lake",
+  "size": [32, 32],
+  "palette": ["#02101d", "#0f3b5f", "#48b8ff"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#01070d", "color2": "#0c2236"},
+    {"op": "stripes", "orientation": "h", "gap": 5, "width": 1, "color": "#3ea1dd", "alpha": 0.45},
+    {"op": "noise", "scale": 11, "alpha": 0.35, "color1": "#74d6ff", "color2": "#07192a"}
+  ]
+}

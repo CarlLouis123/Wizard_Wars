@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "astral_tile",
+  "size": [32, 32],
+  "palette": ["#150e2a", "#2b1f4c", "#8e7bff"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "x", "color1": "#140c27", "color2": "#2e2154"},
+    {"op": "stripes", "orientation": "v", "gap": 8, "width": 1, "color": "#463a7a", "alpha": 0.55},
+    {"op": "dots", "count": 50, "radius": 1, "color": "#b8a8ff", "alpha": 0.35}
+  ]
+}

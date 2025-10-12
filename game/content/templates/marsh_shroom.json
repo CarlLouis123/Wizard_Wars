@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "type": "sprite",
+  "name": "marsh_shroom",
+  "size": [22, 36],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#221b2a", "color2": "#3e2c4d"},
+    {"op": "blobs", "count": 4, "radius": 8, "color": "#8fe07f", "alpha": 0.65},
+    {"op": "dots", "count": 16, "radius": 1, "color": "#c4ffb9", "alpha": 0.55}
+  ]
+}

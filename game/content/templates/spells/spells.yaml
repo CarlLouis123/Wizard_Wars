@@ -1,0 +1,39 @@
+spells:
+  - id: spark
+    mana_cost: 5
+    speed: 12
+    radius: 4
+    damage: 10
+    sprite_layers:
+      - core_glow
+    sound: fire_cast.ogg
+    description: "Basic projectile that arcs quickly across short distances."
+  - id: barrier
+    mana_cost: 20
+    speed: 0
+    radius: 18
+    damage: 0
+    sprite_layers:
+      - shield_core
+      - shield_outline
+    sound: barrier_raise.ogg
+    description: "Summons a circular ward that blocks incoming projectiles for a few seconds."
+  - id: blink
+    mana_cost: 12
+    speed: 0
+    radius: 0
+    damage: 0
+    sprite_layers:
+      - blink_flash
+    sound: blink_dash.ogg
+    description: "Short-range teleport that slips through thin walls and hazards."
+  - id: fireball
+    mana_cost: 25
+    speed: 8
+    radius: 12
+    damage: 30
+    sprite_layers:
+      - core_glow
+      - outer_flame
+    sound: fire_cast.ogg
+    description: "Splash-damage projectile that ignites enemies and volatile terrain."

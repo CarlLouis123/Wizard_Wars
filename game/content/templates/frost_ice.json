@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "frost_ice",
+  "size": [32, 32],
+  "palette": ["#031524", "#0c2b43", "#69d2ff"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#010b14", "color2": "#0c2134"},
+    {"op": "noise", "scale": 14, "alpha": 0.45, "color1": "#0f3f5f", "color2": "#020d16"},
+    {"op": "dots", "count": 14, "radius": 2, "color": "#9de7ff", "alpha": 0.5}
+  ]
+}

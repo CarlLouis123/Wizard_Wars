@@ -1,0 +1,86 @@
+npc_archetypes:
+  - id: arcane_mentor
+    sprite_template: wizard_moon.json
+    personality: ally
+    school: arcane
+    prompt: "Offer a serene insight on how to balance spellcraft and restraint."
+    dialogue:
+      greeting:
+        - "The planes bend gently for those who breathe before they blaze."
+      branch:
+        default: "Gather runestones to wake the portals; patience is your sharpest focus."
+      combat_trigger: "Should you draw your staff, I will test your wards, not your wrath."
+      reward_hint: "Meditate near the astral obelisks to restore mana between battles."
+  - id: plains_apprentice
+    sprite_template: wizard_verdant.json
+    personality: neutral
+    school: arcane
+    prompt: "Share a concise riddle about time turning like an unseen wheel."
+    dialogue:
+      greeting:
+        - "Did you hear it? The sand keeps time with every cast."
+      branch:
+        default: "Runestones hum louder if you hold a mana crystal in hand."
+      combat_trigger: "If you insist, I will duel—though my aim still wobbles."
+      reward_hint: "Trade mana crystals to sprites to learn their spark pattern."
+  - id: dune_pyromancer
+    sprite_template: wizard_ember.json
+    personality: hostile
+    school: fire
+    prompt: "Explain why humble focus can eclipse a roaring storm of magic."
+    dialogue:
+      greeting:
+        - "Heat is honest. It burns what lingers."
+      branch:
+        default: "Fire Essences bloom where lava meets cooled crust."
+      combat_trigger: "Stand ready—my fire rings show no mercy."
+      reward_hint: "Sling a spark through the vents to ignite hidden fumaroles."
+  - id: frost_oracle
+    sprite_template: wizard_void.json
+    personality: neutral
+    school: frost
+    prompt: "Hint at a path hidden in moonlit mist that favours the patient."
+    dialogue:
+      greeting:
+        - "Snow remembers the lightest footsteps."
+      branch:
+        default: "Blink across frozen ponds before the ice predicts your path."
+      combat_trigger: "Cross my runes and your boots will freeze in place."
+      reward_hint: "Three ice elementals guard a rune; circle them clockwise to pass."
+  - id: marsh_necromage
+    sprite_template: wizard_verdant.json
+    personality: hostile
+    school: shadow
+    prompt: "Whisper advice about weaving light and shadow into a single motion."
+    dialogue:
+      greeting:
+        - "Fog hides poison for friend and foe alike."
+      branch:
+        default: "Barrier wards cancel the toxic fog if cast before the bell."
+      combat_trigger: "My necro-herons already circle overhead."
+      reward_hint: "Collect ectoplasm to craft resistance runes at the cauldron."
+  - id: astral_reflection
+    sprite_template: wizard_moon.json
+    personality: hostile
+    school: arcane
+    prompt: "Speak of how knowledge kept close can reshape the battlefield."
+    dialogue:
+      greeting:
+        - "Only mirrors greet trespassers in the Citadel."
+      branch:
+        default: "Archmages reflect your spells—bait them with spark then blink."
+      combat_trigger: "Face yourself; every cast returns home."
+      reward_hint: "Runes etched in voidstone grant resistance to reflected fire."
+spawn_rings:
+  - radius_tiles: 6
+    count: 4
+    archetypes: [arcane_mentor, plains_apprentice]
+  - radius_tiles: 14
+    count: 6
+    archetypes: [dune_pyromancer, frost_oracle]
+  - radius_tiles: 22
+    count: 6
+    archetypes: [marsh_necromage]
+  - radius_tiles: 32
+    count: 4
+    archetypes: [astral_reflection]

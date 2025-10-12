@@ -1,0 +1,6 @@
+{
+  "id": "archmage_reflection",
+  "phase_1": {"attack": "mirror_bolt", "cooldown": 5},
+  "phase_2": {"attack": "spell_reflect", "cooldown": 6},
+  "phase_3": {"summon": "mirror_clone", "count": 4}
+}
