@@ -18,6 +18,24 @@ import settings as S
 HERE = Path(__file__).resolve().parent
 TPL_DIR = HERE / "content" / "templates"
 
+WIZARD_AVATARS: Sequence[Path] = (
+    TPL_DIR / "wizard_moon.json",
+    TPL_DIR / "wizard_ember.json",
+    TPL_DIR / "wizard_verdant.json",
+    TPL_DIR / "wizard_void.json",
+)
+
+WIZARD_PROMPTS: Sequence[str] = (
+    "Offer a serene insight on how to balance spellcraft and restraint.",
+    "Share a concise riddle about time turning like an unseen wheel.",
+    "Describe how camaraderie can empower a duel without naming any saga.",
+    "Hint at a path hidden in moonlit mist that favours the patient.",
+    "Explain why humble focus can eclipse a roaring storm of magic.",
+    "Recall a legend of starlit wanderers and relate it to this arena.",
+    "Whisper advice about weaving light and shadow into a single motion.",
+    "Speak of how knowledge kept close can reshape the battlefield.",
+)
+
 
 def _world_to_tile(x: float, y: float) -> tuple[int, int]:
     return int(x // S.TILE_SIZE), int(y // S.TILE_SIZE)
@@ -31,16 +49,25 @@ def _collides(tilemap: TileMap, nx: float, ny: float, current_y: float, current_
     return col_x, col_y
 
 
-def _spawn_npcs(tilemap: TileMap, count: int, tpl_path: Path) -> list[NPC]:
+def _spawn_npcs(
+    tilemap: TileMap,
+    count: int,
+    tpl_paths: Sequence[Path],
+    prompts: Sequence[str],
+) -> list[NPC]:
+    if not tpl_paths:
+        raise ValueError("At least one wizard avatar template is required.")
     npcs: list[NPC] = []
-    for _ in range(count):
+    for i in range(count):
         while True:
             tx = random.randint(0, tilemap.w - 1)
             ty = random.randint(0, tilemap.h - 1)
             if tilemap.walkable(tx, ty):
                 nx = tx * S.TILE_SIZE + S.TILE_SIZE // 2
                 ny = ty * S.TILE_SIZE + S.TILE_SIZE // 2
-                npcs.append(NPC(nx, ny, S.TILE_SIZE, str(tpl_path)))
+                tpl = tpl_paths[i % len(tpl_paths)]
+                prompt = prompts[i % len(prompts)] if prompts else "Offer a wizardly insight."
+                npcs.append(NPC(nx, ny, S.TILE_SIZE, str(tpl), prompt))
                 break
     return npcs
 
@@ -57,13 +84,18 @@ def _nearest_npc(player: Player, npcs: Iterable[NPC], max_distance: float = 56.0
 
 
 def _draw_ui(screen: pg.Surface, font: pg.font.Font, dlg, clock: pg.time.Clock) -> None:
+    title_color = (228, 220, 255)
+    info_color = (180, 170, 210)
+    title = font.render("WizardWars", True, title_color)
+    screen.blit(title, (8, 8))
+
     ui_lines: Sequence[str] = (
-        f"FPS: {clock.get_fps():.0f}",
-        f"G (Gemini): {'ON' if dlg.use_gemini else 'OFF'}",
-        "Move: WASD/Arrows | Talk: E | Toggle: G | Esc: Quit",
+        f"Focus: {'Arcane' if dlg.use_gemini else 'Quiet'}",
+        "WASD/Arrows move | E commune | G toggle guidance",
+        f"Calm FPS: {clock.get_fps():.0f}",
     )
     for i, line in enumerate(ui_lines):
-        screen.blit(font.render(line, True, (255, 255, 255)), (8, 8 + i * 18))
+        screen.blit(font.render(line, True, info_color), (8, 30 + i * 18))
 
 
 def _draw_dialogue(screen: pg.Surface, font: pg.font.Font, text: str) -> None:
@@ -93,15 +125,20 @@ def _draw_dialogue(screen: pg.Surface, font: pg.font.Font, text: str) -> None:
 
 def main() -> None:
     pg.init()
-    pg.display.set_caption("PokeLike - Template Driven")
+    pg.display.set_caption("WizardWars")
     screen = pg.display.set_mode((S.WINDOW_W, S.WINDOW_H))
     clock = pg.time.Clock()
     font = pg.font.SysFont(None, 20)
 
     random.seed(S.SEED)
     tilemap = TileMap(S.WORLD_W, S.WORLD_H, S.TILE_SIZE, S.SEED, str(TPL_DIR))
-    player = Player(S.WINDOW_W // 2, S.WINDOW_H // 2, S.TILE_SIZE, str(TPL_DIR / "player_chibi.json"))
-    npcs = _spawn_npcs(tilemap, 8, TPL_DIR / "npc_chibi.json")
+    player = Player(
+        S.WINDOW_W // 2,
+        S.WINDOW_H // 2,
+        S.TILE_SIZE,
+        str(TPL_DIR / "wizard_player.json"),
+    )
+    npcs = _spawn_npcs(tilemap, 12, WIZARD_AVATARS, WIZARD_PROMPTS)
 
     from engine.dialogue import DialogueEngine
 

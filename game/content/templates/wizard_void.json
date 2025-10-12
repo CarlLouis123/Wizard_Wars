@@ -1,7 +1,7 @@
 {
   "version": 1,
   "type": "sprite",
-  "name": "wizard_player",
+  "name": "wizard_void",
   "size": [
     28,
     28
@@ -9,28 +9,28 @@
   "layers": [
     {
       "op": "sprite_chibi",
-      "shirt": "#4f44a5",
-      "pants": "#221a40",
+      "shirt": "#4b2f83",
+      "pants": "#1a1333",
       "skin": [
-        234,
-        205,
-        178
+        230,
+        204,
+        179
       ],
       "hat": true
     },
     {
       "op": "gradient_linear",
       "axis": "y",
-      "color1": "#6f64f5",
-      "color2": "#2a2156",
-      "alpha": 0.45
+      "color1": "#b08dff",
+      "color2": "#2a174f",
+      "alpha": 0.42
     },
     {
       "op": "dots",
-      "count": 24,
+      "count": 18,
       "radius": 1,
-      "color": "#b7a6ff",
-      "alpha": 0.4
+      "color": "#e0d2ff",
+      "alpha": 0.35
     }
   ]
 }

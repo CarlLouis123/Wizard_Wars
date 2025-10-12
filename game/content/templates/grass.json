@@ -1,40 +1,36 @@
 {
   "version": 1,
   "type": "texture",
-  "name": "grass",
+  "name": "manafield",
   "size": [
     32,
     32
   ],
   "palette": [
-    "FOREST"
+    "#101429",
+    "#1b2c4a",
+    "#66ffe0"
   ],
   "layers": [
     {
-      "op": "fill",
-      "color": "FOREST"
+      "op": "gradient_linear",
+      "axis": "y",
+      "color1": "#0c1121",
+      "color2": "#1f2d4a"
     },
     {
       "op": "noise",
-      "scale": 16,
-      "alpha": 0.25,
-      "color1": "FOREST",
-      "color2": [
-        50,
-        150,
-        80
-      ]
+      "scale": 14,
+      "alpha": 0.45,
+      "color1": "#1f3f5f",
+      "color2": "#0a182f"
     },
     {
       "op": "dots",
-      "count": 90,
+      "count": 80,
       "radius": 1,
-      "color": [
-        30,
-        90,
-        50
-      ],
-      "alpha": 0.55
+      "color": "#7fffd4",
+      "alpha": 0.35
     }
   ]
 }

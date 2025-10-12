@@ -1,7 +1,7 @@
 {
   "version": 1,
   "type": "sprite",
-  "name": "tree",
+  "name": "crystal_orchid",
   "size": [
     32,
     32
@@ -10,25 +10,24 @@
     {
       "op": "blobs",
       "count": 1,
-      "radius": 12,
-      "jitter": 0.25,
-      "color": [
-        34,
-        139,
-        94
-      ]
+      "radius": 11,
+      "jitter": 0.2,
+      "color": "#4b2f83"
     },
     {
       "op": "blobs",
       "count": 1,
-      "radius": 10,
-      "jitter": 0.15,
-      "color": [
-        25,
-        120,
-        80
-      ],
-      "alpha": 0.9
+      "radius": 8,
+      "jitter": 0.12,
+      "color": "#7a5bff",
+      "alpha": 0.85
+    },
+    {
+      "op": "gradient_linear",
+      "axis": "y",
+      "color1": "#a68bff",
+      "color2": "#46327b",
+      "alpha": 0.5
     },
     {
       "op": "outline_rect",
@@ -37,11 +36,7 @@
       "w": 4,
       "h": 8,
       "thickness": 0,
-      "color": [
-        130,
-        90,
-        50
-      ]
+      "color": "#3d2b55"
     }
   ]
 }
