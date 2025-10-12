@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "type": "sprite",
+  "name": "frost_pillar",
+  "size": [24, 46],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#0d1f2f", "color2": "#4cb0ff"},
+    {"op": "stripes", "orientation": "v", "gap": 6, "width": 1, "color": "#c0f4ff", "alpha": 0.5},
+    {"op": "dots", "count": 20, "radius": 1, "color": "#7be5ff", "alpha": 0.45}
+  ]
+}

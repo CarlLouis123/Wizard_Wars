@@ -1,0 +1,6 @@
+{
+  "id": "conjurer_of_cinders",
+  "phase_1": {"attack": "fire_ring", "cooldown": 5},
+  "phase_2": {"attack": "meteor_storm", "cooldown": 7},
+  "phase_3": {"summon": "lava_minion", "count": 3}
+}

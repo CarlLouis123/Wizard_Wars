@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "arcane_water",
+  "size": [32, 32],
+  "palette": ["#0b1c33", "#123c6a", "#3cc9ff"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#061222", "color2": "#12365d"},
+    {"op": "stripes", "orientation": "h", "gap": 6, "width": 2, "color": "#1f6db0", "alpha": 0.45},
+    {"op": "noise", "scale": 12, "alpha": 0.35, "color1": "#0f4c88", "color2": "#0a1d33"}
+  ]
+}

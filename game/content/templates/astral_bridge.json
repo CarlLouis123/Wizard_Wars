@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "astral_bridge",
+  "size": [32, 32],
+  "palette": ["#1d1238", "#372966", "#a48fff"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "x", "color1": "#140c27", "color2": "#2e2154"},
+    {"op": "stripes", "orientation": "h", "gap": 4, "width": 1, "color": "#8f7bff", "alpha": 0.55},
+    {"op": "dots", "count": 32, "radius": 1, "color": "#6b54ff", "alpha": 0.4}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "arcane_ruins",
+  "size": [32, 32],
+  "palette": ["#322a44", "#59507a", "#b8b0ff"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#201b31", "color2": "#4a3f6d"},
+    {"op": "stripes", "orientation": "h", "gap": 6, "width": 2, "color": "#756ab5", "alpha": 0.5},
+    {"op": "dots", "count": 24, "radius": 2, "color": "#e3ddff", "alpha": 0.35}
+  ]
+}

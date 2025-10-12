@@ -5,12 +5,13 @@ FPS = 60
 
 # ---- World & tiles ----
 TILE_SIZE = 32
-WORLD_W = 64
-WORLD_H = 64
+WORLD_W = 96
+WORLD_H = 96
 SEED = 1337  # change for different procedural layouts
 
 # ---- Player ----
-PLAYER_SPEED = 150  # pixels per second
+# Player movement is defined in templates; this fallback keeps legacy behaviour consistent.
+PLAYER_BASE_SPEED_TILES = 3.5
 
 # ---- Gemini (dialogue) ----
 USE_GEMINI = False       # Press G in-game to toggle ON/OFF

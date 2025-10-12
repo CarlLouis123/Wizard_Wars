@@ -1,4 +1,4 @@
-"""Entry point for the template-driven PokeLike demo."""
+"""Entry point for the template-driven Wizard Wars sandbox."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 import pygame as pg
+import yaml
 
 from engine.entities import NPC, Player
 from engine.tilemap import TileMap
@@ -18,23 +19,16 @@ import settings as S
 HERE = Path(__file__).resolve().parent
 TPL_DIR = HERE / "content" / "templates"
 
-WIZARD_AVATARS: Sequence[Path] = (
-    TPL_DIR / "wizard_moon.json",
-    TPL_DIR / "wizard_ember.json",
-    TPL_DIR / "wizard_verdant.json",
-    TPL_DIR / "wizard_void.json",
-)
 
-WIZARD_PROMPTS: Sequence[str] = (
-    "Offer a serene insight on how to balance spellcraft and restraint.",
-    "Share a concise riddle about time turning like an unseen wheel.",
-    "Describe how camaraderie can empower a duel without naming any saga.",
-    "Hint at a path hidden in moonlit mist that favours the patient.",
-    "Explain why humble focus can eclipse a roaring storm of magic.",
-    "Recall a legend of starlit wanderers and relate it to this arena.",
-    "Whisper advice about weaving light and shadow into a single motion.",
-    "Speak of how knowledge kept close can reshape the battlefield.",
-)
+def _load_npc_catalog(path: Path) -> tuple[dict[str, dict], list[dict]]:
+    with open(path, "r", encoding="utf-8") as fp:
+        data = yaml.safe_load(fp) or {}
+    archetypes = {entry["id"]: entry for entry in data.get("npc_archetypes", []) if entry.get("id")}
+    rings = [ring for ring in data.get("spawn_rings", []) if ring]
+    return archetypes, rings
+
+
+NPC_ARCHETYPES, NPC_SPAWN_RINGS = _load_npc_catalog(TPL_DIR / "npc_wizard.yaml")
 
 
 def _world_to_tile(x: float, y: float) -> tuple[int, int]:
@@ -49,26 +43,50 @@ def _collides(tilemap: TileMap, nx: float, ny: float, current_y: float, current_
     return col_x, col_y
 
 
-def _spawn_npcs(
-    tilemap: TileMap,
-    count: int,
-    tpl_paths: Sequence[Path],
-    prompts: Sequence[str],
-) -> list[NPC]:
-    if not tpl_paths:
-        raise ValueError("At least one wizard avatar template is required.")
+def _spawn_npcs(tilemap: TileMap) -> list[NPC]:
+    if not NPC_ARCHETYPES:
+        return []
+
+    centre_x = tilemap.w / 2.0
+    centre_y = tilemap.h / 2.0
     npcs: list[NPC] = []
-    for i in range(count):
-        while True:
-            tx = random.randint(0, tilemap.w - 1)
-            ty = random.randint(0, tilemap.h - 1)
-            if tilemap.walkable(tx, ty):
-                nx = tx * S.TILE_SIZE + S.TILE_SIZE // 2
-                ny = ty * S.TILE_SIZE + S.TILE_SIZE // 2
-                tpl = tpl_paths[i % len(tpl_paths)]
-                prompt = prompts[i % len(prompts)] if prompts else "Offer a wizardly insight."
-                npcs.append(NPC(nx, ny, S.TILE_SIZE, str(tpl), prompt))
+    rng = random.Random(tilemap.seed ^ 0xC1A0F00D)
+
+    for ring in NPC_SPAWN_RINGS:
+        radius = float(ring.get("radius_tiles", 6))
+        count = int(ring.get("count", 0))
+        archetypes = [NPC_ARCHETYPES[a] for a in ring.get("archetypes", []) if a in NPC_ARCHETYPES]
+        if not archetypes or count <= 0:
+            continue
+
+        for i in range(count):
+            spec = archetypes[i % len(archetypes)]
+            angle = rng.random() * math.tau
+            for _ in range(32):
+                tx = int(centre_x + math.cos(angle) * radius + rng.uniform(-1, 1))
+                ty = int(centre_y + math.sin(angle) * radius + rng.uniform(-1, 1))
+                angle += math.tau / (count + 1)
+                if not tilemap.walkable(tx, ty):
+                    continue
+                wx = tx * S.TILE_SIZE + S.TILE_SIZE // 2
+                wy = ty * S.TILE_SIZE + S.TILE_SIZE // 2
+                tpl = TPL_DIR / spec.get("sprite_template", "wizard_moon.json")
+                npc = NPC(
+                    wx,
+                    wy,
+                    str(tpl),
+                    prompt=str(spec.get("prompt", "Offer a wizardly insight.")),
+                    personality=str(spec.get("personality", "neutral")),
+                    school=str(spec.get("school", "arcane")),
+                    dialogue=spec.get("dialogue", {}),
+                )
+                npc.archetype_id = spec.get("id", "unknown")
+                npc.spawn_radius = radius
+                biome = tilemap.biome_at(tx, ty)
+                npc.spawn_biome = biome.id
+                npcs.append(npc)
                 break
+
     return npcs
 
 
@@ -83,14 +101,29 @@ def _nearest_npc(player: Player, npcs: Iterable[NPC], max_distance: float = 56.0
     return talking
 
 
-def _draw_ui(screen: pg.Surface, font: pg.font.Font, dlg, clock: pg.time.Clock) -> None:
+def _draw_ui(
+    screen: pg.Surface,
+    font: pg.font.Font,
+    dlg,
+    clock: pg.time.Clock,
+    player: Player,
+    biome,
+) -> None:
     title_color = (228, 220, 255)
     info_color = (180, 170, 210)
-    title = font.render("WizardWars", True, title_color)
+    title = font.render("Wizard Wars", True, title_color)
     screen.blit(title, (8, 8))
 
+    spells = ", ".join(spell.id for spell in player.spells) if player.spells else "None"
+    status = f"HP {player.health}/{player.max_health} | Mana {player.mana}/{player.max_mana}"
+    biome_line = f"Biome: {biome.label}" if biome else "Biome: Unknown"
+    features = biome.description if biome else ""
     ui_lines: Sequence[str] = (
-        f"Focus: {'Arcane' if dlg.use_gemini else 'Quiet'}",
+        status,
+        f"Spells: {spells}",
+        biome_line,
+        features,
+        f"Focus: {'Gemini' if dlg.use_gemini else 'Archive'}",
         "WASD/Arrows move | E commune | G toggle guidance",
         f"Calm FPS: {clock.get_fps():.0f}",
     )
@@ -136,9 +169,10 @@ def main() -> None:
         S.WINDOW_W // 2,
         S.WINDOW_H // 2,
         S.TILE_SIZE,
-        str(TPL_DIR / "player_chibi.json"),
+        str(TPL_DIR / "player_wizard.json"),
     )
-    npcs = _spawn_npcs(tilemap, 12, WIZARD_AVATARS, WIZARD_PROMPTS)
+    player.load_spells(TPL_DIR)
+    npcs = _spawn_npcs(tilemap)
 
     from engine.dialogue import DialogueEngine
 
@@ -166,11 +200,11 @@ def main() -> None:
                 elif event.key == pg.K_e:
                     npc = _nearest_npc(player, npcs)
                     if npc:
-                        dialogue_text = dlg.npc_line(npc.dialogue_prompt)
+                        dialogue_text = dlg.npc_line(npc.dialogue_prompt, npc.fallback_lines)
 
         keys = pg.key.get_pressed()
         dx = dy = 0.0
-        speed = S.PLAYER_SPEED
+        speed = player.move_speed
         if keys[pg.K_LEFT] or keys[pg.K_a]:
             dx -= speed
         if keys[pg.K_RIGHT] or keys[pg.K_d]:
@@ -207,12 +241,13 @@ def main() -> None:
         for ty in range(sty, ety):
             for tx in range(stx, etx):
                 deco_id = tilemap.deco[ty][tx]
-                if deco_id:
-                    surf = tilemap.get_deco_surface(deco_id, (tx * 83492791) ^ (ty * 29765729))
-                    if surf:
-                        rect = surf.get_rect()
-                        rect.center = (tx * ts - cam_x + ts // 2, ty * ts - cam_y + ts // 2)
-                        screen.blit(surf, rect)
+                drawable = tilemap.get_deco_drawable(deco_id, (tx * 83492791) ^ (ty * 29765729))
+                if drawable:
+                    surf, offset = drawable
+                    rect = surf.get_rect()
+                    rect.center = (tx * ts - cam_x + ts // 2, ty * ts - cam_y + ts // 2)
+                    rect.move_ip(offset)
+                    screen.blit(surf, rect)
 
         for npc in npcs:
             rect = npc.sprite.get_rect(center=(npc.x - cam_x, npc.y - cam_y))
@@ -221,7 +256,8 @@ def main() -> None:
         rect = player.sprite.get_rect(center=(player.x - cam_x, player.y - cam_y))
         screen.blit(player.sprite, rect)
 
-        _draw_ui(screen, font, dlg, clock)
+        biome = tilemap.biome_at_world(player.x, player.y)
+        _draw_ui(screen, font, dlg, clock, player, biome)
         _draw_dialogue(screen, font, dialogue_text)
 
         pg.display.flip()

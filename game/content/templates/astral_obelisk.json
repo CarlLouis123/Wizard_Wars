@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "type": "sprite",
+  "name": "astral_obelisk",
+  "size": [26, 48],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#1a1031", "color2": "#4b3a82"},
+    {"op": "stripes", "orientation": "v", "gap": 7, "width": 1, "color": "#d5c5ff", "alpha": 0.6},
+    {"op": "dots", "count": 30, "radius": 1, "color": "#9f8bff", "alpha": 0.5}
+  ]
+}

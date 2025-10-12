@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "marsh_path",
+  "size": [32, 32],
+  "palette": ["#2a2217", "#413325", "#a18d63"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "x", "color1": "#1b140d", "color2": "#3a2b1d"},
+    {"op": "stripes", "orientation": "v", "gap": 5, "width": 2, "color": "#7c6848", "alpha": 0.5},
+    {"op": "noise", "scale": 18, "alpha": 0.35, "color1": "#322619", "color2": "#0f0c08"}
+  ]
+}

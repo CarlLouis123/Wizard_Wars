@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "marsh_pool",
+  "size": [32, 32],
+  "palette": ["#09140f", "#123429", "#44c09a"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#040a08", "color2": "#0f241b"},
+    {"op": "stripes", "orientation": "h", "gap": 7, "width": 2, "color": "#1f8060", "alpha": 0.5},
+    {"op": "noise", "scale": 10, "alpha": 0.35, "color1": "#36aa80", "color2": "#071511"}
+  ]
+}

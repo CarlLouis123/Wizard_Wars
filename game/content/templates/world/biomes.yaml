@@ -1,0 +1,111 @@
+biomes:
+  - id: arcane_plains
+    label: "Arcane Plains"
+    description: "Starting zone, grassy with ruins."
+    radius_tiles: 12
+    palette:
+      tile_color: "#6ad9ff"
+      prop_density: 0.08
+    music: music/arcane_plains.ogg
+    weather:
+      type: clear
+      light_tint: "#9ad1ff"
+    enemies: ["apprentice_wizard", "wild_sprite"]
+    base_tiles:
+      - tile: arcane_grass
+        weight: 0.7
+      - tile: arcane_ruins
+        weight: 0.15
+      - tile: arcane_water
+        weight: 0.15
+    deco_tiles:
+      - tile: arcane_tree
+        weight: 0.08
+  - id: molten_dunes
+    label: "Molten Dunes"
+    description: "Volcanic desert with lava fissures."
+    radius_tiles: 22
+    palette:
+      tile_color: "#ff8a3d"
+      prop_density: 0.05
+    music: music/molten_dunes.ogg
+    weather:
+      type: heatwave
+      light_tint: "#ffb36b"
+    enemies: ["fire_imp", "sand_wraith"]
+    base_tiles:
+      - tile: molten_sand
+        weight: 0.6
+      - tile: molten_crust
+        weight: 0.25
+      - tile: molten_lava
+        weight: 0.15
+    deco_tiles:
+      - tile: molten_fumarole
+        weight: 0.05
+  - id: frostlands
+    label: "Frostlands"
+    description: "Snow biome, slippery ice."
+    radius_tiles: 32
+    palette:
+      tile_color: "#8de5ff"
+      prop_density: 0.06
+    music: music/frostlands.ogg
+    weather:
+      type: blizzard
+      light_tint: "#b5eaff"
+    enemies: ["ice_elemental", "frost_golem"]
+    base_tiles:
+      - tile: frost_snow
+        weight: 0.55
+      - tile: frost_ice
+        weight: 0.25
+      - tile: frost_lake
+        weight: 0.20
+    deco_tiles:
+      - tile: frost_pillar
+        weight: 0.07
+  - id: verdant_marsh
+    label: "Verdant Marsh"
+    description: "Swampy biome with poison pools."
+    radius_tiles: 42
+    palette:
+      tile_color: "#74c780"
+      prop_density: 0.09
+    music: music/verdant_marsh.ogg
+    weather:
+      type: fog
+      light_tint: "#91d197"
+    enemies: ["slime_mage", "necro_heron"]
+    base_tiles:
+      - tile: marsh_mire
+        weight: 0.5
+      - tile: marsh_path
+        weight: 0.2
+      - tile: marsh_pool
+        weight: 0.3
+    deco_tiles:
+      - tile: marsh_shroom
+        weight: 0.09
+  - id: astral_citadel
+    label: "Astral Citadel"
+    description: "Floating endgame fortress."
+    radius_tiles: 999
+    palette:
+      tile_color: "#b8a8ff"
+      prop_density: 0.04
+    music: music/astral_citadel.ogg
+    weather:
+      type: rift
+      light_tint: "#c7b7ff"
+    enemies: ["archmage", "mirror_clone"]
+    base_tiles:
+      - tile: astral_tile
+        weight: 0.5
+      - tile: astral_bridge
+        weight: 0.3
+      - tile: astral_void
+        weight: 0.2
+    deco_tiles:
+      - tile: astral_obelisk
+        weight: 0.05

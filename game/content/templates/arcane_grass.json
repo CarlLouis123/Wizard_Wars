@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "arcane_grass",
+  "size": [32, 32],
+  "palette": ["#2c1f3a", "#4c2f6b", "#8dd7ff"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#1a1128", "color2": "#342157"},
+    {"op": "noise", "scale": 18, "alpha": 0.55, "color1": "#3b2a58", "color2": "#120818"},
+    {"op": "dots", "count": 70, "radius": 1, "color": "#76ffe4", "alpha": 0.35}
+  ]
+}

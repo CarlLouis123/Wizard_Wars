@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "type": "sprite",
+  "name": "molten_fumarole",
+  "size": [26, 42],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#2a1111", "color2": "#4a1f1b"},
+    {"op": "stripes", "orientation": "h", "gap": 5, "width": 1, "color": "#ff7132", "alpha": 0.55},
+    {"op": "dots", "count": 24, "radius": 2, "color": "#ffb347", "alpha": 0.45}
+  ]
+}

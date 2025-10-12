@@ -1,0 +1,7 @@
+{
+  "fireball_cast": {"volume": 0.8, "path": "sfx/fire_cast.ogg"},
+  "spark_cast": {"volume": 0.6, "path": "sfx/spark.ogg"},
+  "blink_dash": {"volume": 0.5, "path": "sfx/blink.ogg"},
+  "barrier_raise": {"volume": 0.7, "path": "sfx/barrier.ogg"},
+  "npc_talk": {"volume": 0.6, "path": "sfx/dialogue_blip.ogg"}
+}

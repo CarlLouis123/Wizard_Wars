@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "marsh_mire",
+  "size": [32, 32],
+  "palette": ["#1b1f16", "#2f3c21", "#6dbf52"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#141710", "color2": "#27331b"},
+    {"op": "noise", "scale": 12, "alpha": 0.6, "color1": "#3f5e2f", "color2": "#171c12"},
+    {"op": "dots", "count": 40, "radius": 1, "color": "#8ee07a", "alpha": 0.3}
+  ]
+}

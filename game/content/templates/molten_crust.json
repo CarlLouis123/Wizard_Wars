@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "type": "texture",
+  "name": "molten_crust",
+  "size": [32, 32],
+  "palette": ["#1f1b25", "#322535", "#a84f31"],
+  "layers": [
+    {"op": "gradient_linear", "axis": "y", "color1": "#130f18", "color2": "#2d2332"},
+    {"op": "noise", "scale": 20, "alpha": 0.55, "color1": "#2f202d", "color2": "#0f0b11"},
+    {"op": "dots", "count": 18, "radius": 2, "color": "#ff7f4a", "alpha": 0.5}
+  ]
+}
