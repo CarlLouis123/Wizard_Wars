@@ -143,6 +143,7 @@ def main() -> None:
     from engine.dialogue import DialogueEngine
 
     dlg = DialogueEngine(use_gemini=S.USE_GEMINI, model_name=S.MODEL_NAME)
+    dlg.prewarm(npc.dialogue_prompt for npc in npcs)
     dialogue_text = ""
 
     running = True
@@ -160,6 +161,8 @@ def main() -> None:
                     running = False
                 elif event.key == pg.K_g:
                     dlg.use_gemini = not dlg.use_gemini
+                    if dlg.use_gemini:
+                        dlg.prewarm(npc.dialogue_prompt for npc in npcs)
                 elif event.key == pg.K_e:
                     npc = _nearest_npc(player, npcs)
                     if npc:
