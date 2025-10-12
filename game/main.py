@@ -136,7 +136,7 @@ def main() -> None:
         S.WINDOW_W // 2,
         S.WINDOW_H // 2,
         S.TILE_SIZE,
-        str(TPL_DIR / "wizard_player.json"),
+        str(TPL_DIR / "player_chibi.json"),
     )
     npcs = _spawn_npcs(tilemap, 12, WIZARD_AVATARS, WIZARD_PROMPTS)
 
