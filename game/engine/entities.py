@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import yaml
 
@@ -52,9 +53,29 @@ class Player(Entity):
         speed_tiles = float(stats.get("speed_tiles_per_second", 3.5))
         self.move_speed = speed_tiles * tile_size
 
+        turn_speed = float(stats.get("turn_speed_deg_per_second", 140.0))
+        initial_angle = float(stats.get("initial_angle_deg", 90.0))
+        self.turn_speed = math.radians(turn_speed)
+        self.angle = math.radians(initial_angle)
+        self.fov = math.radians(float(stats.get("fov_degrees", 80.0)))
+        self.eye_height = float(stats.get("eye_height_pixels", tile_size * 0.75))
+        self.step_height = float(stats.get("step_height_pixels", tile_size * 0.25))
+
         self.inventory = definition.get("inventory", {"slots": 10, "items": []})
         self._spell_ids: List[str] = list(definition.get("spells", []))
         self.spells: List[Spell] = []
+
+    # ------------------------------------------------------------------ vectors
+    def forward_vector(self) -> Tuple[float, float]:
+        """Return a normalized vector representing the facing direction."""
+
+        return math.cos(self.angle), math.sin(self.angle)
+
+    def right_vector(self) -> Tuple[float, float]:
+        """Return a normalized vector pointing to the player's right."""
+
+        fx, fy = self.forward_vector()
+        return -fy, fx
 
     def load_spells(self, templates_dir: Path) -> None:
         """Populate the player's spellbook from YAML definitions."""
