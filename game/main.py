@@ -865,10 +865,10 @@ def main() -> None:
 
         boost = 1.0 + (0.5 if keys[pg.K_LSHIFT] or keys[pg.K_RSHIFT] else 0.0)
         speed = player.move_speed * dt * boost
-        fx, fy = player.forward_vector()
-        rx, ry = player.right_vector()
-        dx = (fx * forward + rx * strafe) * speed
-        dy = (fy * forward + ry * strafe) * speed
+        fwd_x, fwd_y = player.forward_vector()
+        right_x, right_y = player.right_vector()
+        dx = (fwd_x * forward + right_x * strafe) * speed
+        dy = (fwd_y * forward + right_y * strafe) * speed
         _move_player(tilemap, player, dx, dy)
 
         highlight = _nearest_visible_npc(player, npcs)
