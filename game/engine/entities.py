@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import math
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
@@ -29,11 +29,30 @@ class Entity:
     y: float
     sprite: pg.Surface
     solid: bool = True
+    _scale_cache: dict[int, pg.Surface] = field(default_factory=dict, init=False, repr=False)
 
     def rect(self) -> pg.Rect:
         rect = self.sprite.get_rect()
         rect.center = (int(self.x), int(self.y))
         return rect
+
+    def get_scaled_sprite(self, target_height: int) -> pg.Surface:
+        """Return a cached scaled version of the sprite for rendering."""
+
+        target_height = max(1, int(target_height))
+        cached = self._scale_cache.get(target_height)
+        if cached is not None:
+            return cached
+
+        base = self.sprite
+        if base.get_height() <= 0:
+            return base
+
+        scale_ratio = target_height / base.get_height()
+        width = max(1, int(base.get_width() * scale_ratio))
+        scaled = pg.transform.smoothscale(base, (width, target_height))
+        self._scale_cache[target_height] = scaled
+        return scaled
 
 
 class AnimatedEntity(Entity):
@@ -64,6 +83,7 @@ class AnimatedEntity(Entity):
             self._frame_timer -= self._frame_duration
             self._frame_index = (self._frame_index + 1) % len(self._frames)
             self.sprite = self._frames[self._frame_index]
+            self._scale_cache.clear()
 
 
 class Player(Entity):
