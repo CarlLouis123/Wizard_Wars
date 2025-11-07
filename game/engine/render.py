@@ -328,7 +328,10 @@ class RaycastRenderer:
                 if transform_y >= z_buffer[sprite_screen_x] + 0.2:
                     continue
 
-            scaled_sprite = pg.transform.smoothscale(sprite_surface, (sprite_width, sprite_height))
+            if hasattr(sprite, "get_scaled_sprite"):
+                scaled_sprite = sprite.get_scaled_sprite(sprite_height)
+            else:
+                scaled_sprite = pg.transform.smoothscale(sprite_surface, (sprite_width, sprite_height))
             dest_rect = scaled_sprite.get_rect()
             dest_rect.centerx = sprite_screen_x
             dest_rect.bottom = draw_end_y

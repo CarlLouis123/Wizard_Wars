@@ -8,11 +8,12 @@ import random
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List
+from typing import Dict, Iterable, List
 
 import pygame as pg
 import yaml
 
+from engine.audio import AudioManager
 from engine.dialogue import DialogueEngine
 from engine.entities import (
     Collectible,
@@ -27,6 +28,7 @@ from engine.player import MovementInput, PlayerController
 from engine.render import RaycastRenderer
 from engine.terrain import TerrainSystem
 from engine.world import TileDefinition, WorldMap
+from engine.weather import WeatherSystem
 import settings as S
 
 
@@ -101,6 +103,16 @@ class GameApp:
         self.enemies = self._spawn_enemies()
         self.collectibles = self._spawn_collectibles()
 
+        audio_dir = Path(__file__).resolve().parent / "content" / "audio"
+        self.audio = AudioManager(audio_dir)
+        self.weather = WeatherSystem(config.resolution)
+        self.save_path = Path(__file__).resolve().parent / "savegame.json"
+
+        self._map_cache: Dict[int, pg.Surface] = {}
+        self._minimap_scale = 8
+        self._worldmap_scale = 22
+        self._show_world_map = False
+
         self._dialogue_text = ""
         self._dialogue_timer = 0.0
         self._pickup_message = ""
@@ -112,15 +124,18 @@ class GameApp:
 
     # ----------------------------------------------------------------- lifecycle
     def run(self) -> None:
-        while True:
-            dt = self.clock.tick(self.config.fps_limit) / 1000.0
-            if not self._process_events():
-                break
-            self._update(dt)
-            self._draw()
-            pg.display.flip()
-            fps = self.clock.get_fps()
-            pg.display.set_caption(f"Wizard Wars :: FPS {fps:5.1f}")
+        try:
+            while True:
+                dt = self.clock.tick(self.config.fps_limit) / 1000.0
+                if not self._process_events():
+                    break
+                self._update(dt)
+                self._draw()
+                pg.display.flip()
+                fps = self.clock.get_fps()
+                pg.display.set_caption(f"Wizard Wars :: FPS {fps:5.1f}")
+        finally:
+            self.audio.shutdown()
 
     # ------------------------------------------------------------------- internals
     def _process_events(self) -> bool:
@@ -130,11 +145,18 @@ class GameApp:
             if event.type == pg.VIDEORESIZE:
                 self.screen = pg.display.set_mode(event.size, pg.RESIZABLE)
                 self.renderer.resize(*event.size)
+                self.weather.resize(*event.size)
             if event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
                 if self._mouse_captured:
                     self._toggle_mouse_lock(False)
                 else:
                     return False
+            if event.type == pg.KEYDOWN and event.key == pg.K_m:
+                self._show_world_map = not self._show_world_map
+            if event.type == pg.KEYDOWN and event.key == pg.K_F5:
+                self._save_game()
+            if event.type == pg.KEYDOWN and event.key == pg.K_F9:
+                self._load_game()
             if event.type == pg.KEYDOWN and event.key == pg.K_e:
                 self._interact()
             if event.type == pg.MOUSEBUTTONDOWN and event.button == 1 and self._mouse_captured:
@@ -156,6 +178,12 @@ class GameApp:
         self._movement.right = float(keys[pg.K_d]) - float(keys[pg.K_a])
         self.player.update(dt, self._movement, self.world)
         self.renderer.update_time(dt)
+        self.weather.update(dt)
+        self._apply_weather_to_renderer()
+
+        is_moving = self.player.velocity.length_squared() > 0.01
+        surface_type = self._player_surface_type()
+        self.audio.update(dt, is_moving, surface_type, self.weather.current_state)
         self._attack_cooldown = max(0.0, self._attack_cooldown - dt)
         self._update_npcs(dt)
         self._update_wildlife(dt)
@@ -164,9 +192,33 @@ class GameApp:
         self._update_dialogue(dt)
         self._pending_attack = False
 
+    def _apply_weather_to_renderer(self) -> None:
+        base_distance = 24.0
+        base_ambient = self.renderer.ambient_light
+        state = self.weather.current_state
+        intensity = self.weather.intensity
+
+        if state == "fog":
+            self.renderer.view_distance = max(10.0, base_distance * (1.0 - 0.5 * intensity))
+            self.renderer.ambient_light = min(0.7, base_ambient + 0.1 * intensity)
+        elif state == "rain":
+            self.renderer.view_distance = max(14.0, base_distance * (1.0 - 0.25 * intensity))
+            self.renderer.ambient_light = max(0.08, base_ambient - 0.05 * intensity)
+        elif state == "wind":
+            self.renderer.view_distance = base_distance * (1.0 + 0.05 * intensity)
+            self.renderer.ambient_light = base_ambient
+        else:
+            self.renderer.view_distance = base_distance
+            self.renderer.ambient_light = base_ambient
+
+    def _player_surface_type(self) -> str:
+        tile = self.world.tile(int(self.player.position.x), int(self.player.position.y))
+        return "hard" if tile.solid else "soft"
+
     def _draw(self) -> None:
         sprites = tuple(self.npcs + self.wildlife + self.enemies + self.collectibles)
         self.renderer.render(self.screen, self.player, sprites)
+        self.weather.draw(self.screen)
         self._draw_hud()
 
     # ------------------------------------------------------------------ spawners
@@ -427,6 +479,11 @@ class GameApp:
             rect = banner.get_rect(center=(self.screen.get_width() // 2, self.screen.get_height() // 2))
             self.screen.blit(banner, rect)
 
+        self._draw_weather_indicator()
+        self._draw_minimap()
+        if self._show_world_map:
+            self._draw_world_map()
+
     def _draw_dialogue_box(self, text: str) -> None:
         max_width = self.screen.get_width() - 80
         lines = self._wrap_text(text, max_width, self.dialogue_font)
@@ -444,6 +501,171 @@ class GameApp:
             rendered = self.dialogue_font.render(line, True, (230, 232, 250))
             self.screen.blit(rendered, (box_rect.left + 12, y))
             y += line_height
+
+    def _draw_minimap(self) -> None:
+        surface = self._get_map_surface(self._minimap_scale).copy()
+        scale = self._minimap_scale
+        px = self.player.position.x * scale
+        py = self.player.position.y * scale
+        yaw = self.player.yaw
+        arrow = [
+            (px + math.cos(yaw) * 10, py + math.sin(yaw) * 10),
+            (px + math.cos(yaw + 2.6) * 6, py + math.sin(yaw + 2.6) * 6),
+            (px + math.cos(yaw - 2.6) * 6, py + math.sin(yaw - 2.6) * 6),
+        ]
+        pg.draw.polygon(surface, (255, 230, 150), arrow)
+        pg.draw.circle(surface, (30, 30, 32), (int(px), int(py)), 3)
+
+        frame = pg.Surface((surface.get_width() + 12, surface.get_height() + 12), pg.SRCALPHA)
+        frame.fill((12, 14, 24, 210))
+        frame.blit(surface, (6, 6))
+        pg.draw.rect(frame, (120, 140, 190, 220), frame.get_rect(), width=2, border_radius=10)
+        rect = frame.get_rect()
+        rect.topright = (self.screen.get_width() - 20, 20)
+        self.screen.blit(frame, rect)
+
+    def _draw_world_map(self) -> None:
+        overlay = pg.Surface(self.screen.get_size(), pg.SRCALPHA)
+        overlay.fill((6, 8, 16, 200))
+        self.screen.blit(overlay, (0, 0))
+
+        map_surface = self._get_map_surface(self._worldmap_scale).copy()
+        scale = self._worldmap_scale
+        px = self.player.position.x * scale
+        py = self.player.position.y * scale
+        yaw = self.player.yaw
+        arrow = [
+            (px + math.cos(yaw) * 16, py + math.sin(yaw) * 16),
+            (px + math.cos(yaw + 2.5) * 10, py + math.sin(yaw + 2.5) * 10),
+            (px + math.cos(yaw - 2.5) * 10, py + math.sin(yaw - 2.5) * 10),
+        ]
+        pg.draw.polygon(map_surface, (255, 230, 160), arrow)
+        pg.draw.circle(map_surface, (30, 30, 32), (int(px), int(py)), 4)
+
+        panel = pg.Surface((map_surface.get_width() + 60, map_surface.get_height() + 60), pg.SRCALPHA)
+        panel.fill((18, 20, 32, 235))
+        panel.blit(map_surface, (30, 30))
+        panel_rect = panel.get_rect(center=(self.screen.get_width() // 2, self.screen.get_height() // 2))
+        pg.draw.rect(panel, (120, 150, 220, 230), panel.get_rect(), width=2, border_radius=18)
+        self.screen.blit(panel, panel_rect)
+
+        caption = self.dialogue_font.render("World Map", True, (235, 240, 255))
+        caption_rect = caption.get_rect(midtop=(panel_rect.centerx, panel_rect.top + 16))
+        self.screen.blit(caption, caption_rect)
+
+        hint = self.font.render("Press M to close", True, (220, 220, 220))
+        hint_rect = hint.get_rect(midtop=(panel_rect.centerx, panel_rect.bottom + 12))
+        self.screen.blit(hint, hint_rect)
+
+    def _get_map_surface(self, scale: int) -> pg.Surface:
+        cached = self._map_cache.get(scale)
+        if cached is not None:
+            return cached
+
+        width = self.world.width * scale
+        height = self.world.height * scale
+        surface = pg.Surface((width, height), pg.SRCALPHA)
+        for y in range(self.world.height):
+            for x in range(self.world.width):
+                tile = self.world.tile(x, y)
+                color = tile.color if tile.solid else (70, 90, 60)
+                rect = pg.Rect(x * scale, y * scale, scale, scale)
+                pg.draw.rect(surface, color, rect)
+        self._map_cache[scale] = surface
+        return surface
+
+    def _draw_weather_indicator(self) -> None:
+        label = f"Weather: {self.weather.current_state.title()}"
+        status = self.font.render(label, True, (220, 225, 240))
+        rect = status.get_rect()
+        rect.bottomleft = (20, self.screen.get_height() - 20)
+        backdrop = pg.Surface((rect.width + 16, rect.height + 12), pg.SRCALPHA)
+        backdrop.fill((10, 12, 18, 200))
+        backdrop.blit(status, (8, 6))
+        pg.draw.rect(backdrop, (90, 110, 160, 220), backdrop.get_rect(), width=1, border_radius=8)
+        panel_rect = backdrop.get_rect(bottomleft=(20, self.screen.get_height() - 20))
+        self.screen.blit(backdrop, panel_rect)
+
+    def _save_game(self) -> None:
+        data = {
+            "player": {
+                "position": [self.player.position.x, self.player.position.y],
+                "yaw": self.player.yaw,
+            },
+            "stats": {
+                "health": self.player_stats.health,
+                "mana": self.player_stats.mana,
+            },
+            "inventory": list(self.inventory.items),
+            "weather": {
+                "state": self.weather.current_state,
+                "intensity": self.weather.intensity,
+                "timer": self.weather.transition_timer,
+                "next_transition": self.weather.next_transition,
+            },
+            "time_of_day": self.renderer.time_of_day,
+        }
+        try:
+            with open(self.save_path, "w", encoding="utf-8") as fp:
+                json.dump(data, fp, indent=2)
+        except OSError as exc:
+            self._pickup_message = f"Save failed: {exc.strerror or exc}"[:60]
+            self._pickup_timer = 2.5
+            return
+        self._pickup_message = "Game saved."
+        self._pickup_timer = 2.0
+
+    def _load_game(self) -> None:
+        if not self.save_path.exists():
+            self._pickup_message = "No save data found."
+            self._pickup_timer = 2.5
+            return
+        try:
+            with open(self.save_path, "r", encoding="utf-8") as fp:
+                data = json.load(fp)
+        except (OSError, json.JSONDecodeError) as exc:
+            self._pickup_message = f"Load failed: {exc}"[:60]
+            self._pickup_timer = 2.5
+            return
+
+        player_data = data.get("player", {})
+        position = player_data.get("position")
+        if isinstance(position, list) and len(position) == 2:
+            self.player.position.update(float(position[0]), float(position[1]))
+        yaw = player_data.get("yaw")
+        if isinstance(yaw, (int, float)):
+            self.player.yaw = float(yaw)
+            self.player._refresh_vectors()
+
+        stats = data.get("stats", {})
+        health = stats.get("health")
+        mana = stats.get("mana")
+        if isinstance(health, (int, float)):
+            self.player_stats.health = max(0.0, min(self.player_stats.max_health, float(health)))
+        if isinstance(mana, (int, float)):
+            self.player_stats.mana = max(0.0, min(self.player_stats.max_mana, float(mana)))
+
+        inventory = data.get("inventory")
+        if isinstance(inventory, list):
+            self.inventory.items = [str(item) for item in inventory][: self.inventory.slots]
+
+        weather = data.get("weather", {})
+        state = weather.get("state")
+        if isinstance(state, str):
+            self.weather.current_state = state
+        for key in ("intensity", "timer", "next_transition"):
+            value = weather.get(key)
+            if isinstance(value, (int, float)):
+                setattr(self.weather, key if key != "timer" else "transition_timer", float(value))
+        self.weather._particles.clear()
+
+        time_of_day = data.get("time_of_day")
+        if isinstance(time_of_day, (int, float)):
+            self.renderer.time_of_day = float(time_of_day) % 1.0
+
+        self._apply_weather_to_renderer()
+        self._pickup_message = "Save loaded."
+        self._pickup_timer = 2.5
 
     @staticmethod
     def _wrap_text(text: str, max_width: int, font: pg.font.Font) -> List[str]:
