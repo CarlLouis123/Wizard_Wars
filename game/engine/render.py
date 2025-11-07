@@ -31,12 +31,6 @@ class RaycastRenderer:
     def __init__(self, world: WorldMap, width: int, height: int, terrain: TerrainSystem) -> None:
         self.world = world
         self.terrain = terrain
-        self.resize(width, height)
-        self.view_distance = 24.0
-        self.time_of_day = 0.35
-        self.day_length = 120.0
-        self._sun_strength = 0.5
-        self.ambient_light = 0.22
         self._gpu_enabled = False
         self._device: Optional[TorchDevice] = None
         self._camera_x_gpu = None
@@ -44,6 +38,18 @@ class RaycastRenderer:
         self._tile_solid_gpu = None
         self._max_gpu_steps = 256
         self._last_gpu_error: Optional[str] = None
+
+        # initialize size-dependent attributes before calling resize
+        self.width = 1
+        self.height = 1
+        self.half_height = self.height // 2
+
+        self.resize(width, height)
+        self.view_distance = 24.0
+        self.time_of_day = 0.35
+        self.day_length = 120.0
+        self._sun_strength = 0.5
+        self.ambient_light = 0.22
         self._try_init_gpu()
 
     # -------------------------------------------------------------------- sizing
