@@ -3,9 +3,20 @@
 from __future__ import annotations
 
 import math
-from typing import Iterable
+from typing import Iterable, List, Optional, TYPE_CHECKING
 
 import pygame as pg
+
+try:  # Optional dependency used to accelerate ray casting on the GPU.
+    import torch
+except Exception:  # pragma: no cover - torch is optional at runtime.
+    torch = None  # type: ignore[assignment]
+
+if TYPE_CHECKING:
+    import torch as torch_types
+    TorchDevice = torch_types.device
+else:  # pragma: no cover - type hint helper
+    TorchDevice = object
 
 from .player import PlayerController
 from .terrain import TerrainSystem
@@ -26,12 +37,28 @@ class RaycastRenderer:
         self.day_length = 120.0
         self._sun_strength = 0.5
         self.ambient_light = 0.22
+        self._gpu_enabled = False
+        self._device: Optional[TorchDevice] = None
+        self._camera_x_gpu = None
+        self._tile_color_gpu = None
+        self._tile_solid_gpu = None
+        self._max_gpu_steps = 256
+        self._last_gpu_error: Optional[str] = None
+        self._try_init_gpu()
 
     # -------------------------------------------------------------------- sizing
     def resize(self, width: int, height: int) -> None:
         self.width = max(1, width)
         self.height = max(1, height)
         self.half_height = self.height // 2
+        if self._gpu_enabled:
+            self._camera_x_gpu = torch.linspace(  # type: ignore[call-arg]
+                -1.0,
+                1.0,
+                steps=self.width,
+                device=self._device,
+                dtype=torch.float32,
+            )
 
     # ------------------------------------------------------------------- drawing
     def render(
@@ -45,8 +72,28 @@ class RaycastRenderer:
         direction = player.direction
         plane = player.camera_plane
         pos = player.position
+        if self._gpu_enabled:
+            try:
+                z_buffer = self._render_walls_gpu(surface, player, pos, direction, plane)
+            except RuntimeError as exc:  # pragma: no cover - defensive fallback
+                self._gpu_enabled = False
+                self._last_gpu_error = str(exc)
+                z_buffer = self._render_walls_cpu(surface, player, pos, direction, plane)
+        else:
+            z_buffer = self._render_walls_cpu(surface, player, pos, direction, plane)
 
-        z_buffer = [float("inf")] * self.width
+        if sprites:
+            self._draw_sprites(surface, player, sprites, z_buffer)
+
+    def _render_walls_cpu(
+        self,
+        surface: pg.Surface,
+        player: PlayerController,
+        pos: Vector2,
+        direction: Vector2,
+        plane: Vector2,
+    ) -> List[float]:
+        z_buffer: List[float] = [float("inf")] * self.width
         for column in range(self.width):
             camera_x = 2 * column / self.width - 1
             ray_dir_x = direction.x + plane.x * camera_x
@@ -74,9 +121,41 @@ class RaycastRenderer:
             color = self._shade_color(tile, pos, ray_dir, distance, side, step_x, step_y)
             if draw_end_clamped >= draw_start_clamped:
                 pg.draw.line(surface, color, (column, draw_start_clamped), (column, draw_end_clamped))
+        return z_buffer
 
-        if sprites:
-            self._draw_sprites(surface, player, sprites, z_buffer)
+    def _render_walls_gpu(
+        self,
+        surface: pg.Surface,
+        player: PlayerController,
+        pos: Vector2,
+        direction: Vector2,
+        plane: Vector2,
+    ) -> List[float]:
+        hits, ray_dirs = self._cast_rays_gpu(pos, direction, plane)
+        z_buffer: List[float] = [float("inf")] * self.width
+        for column, hit in enumerate(hits):
+            if hit is None:
+                continue
+
+            distance, tile_x, tile_y, side, step_x, step_y = hit
+            if distance <= 0.0:
+                continue
+
+            z_buffer[column] = distance
+
+            line_height = int(self.height / distance)
+            pitch_offset = int(player.camera_height_offset * self.height)
+            draw_start = -line_height // 2 + self.half_height + pitch_offset
+            draw_end = line_height // 2 + self.half_height + pitch_offset
+            draw_start_clamped = max(0, min(self.height - 1, draw_start))
+            draw_end_clamped = max(0, min(self.height - 1, draw_end))
+
+            tile = self.world.tile(tile_x, tile_y)
+            ray_dir = ray_dirs[column]
+            color = self._shade_color(tile, pos, ray_dir, distance, side, step_x, step_y)
+            if draw_end_clamped >= draw_start_clamped:
+                pg.draw.line(surface, color, (column, draw_start_clamped), (column, draw_end_clamped))
+        return z_buffer
 
     # ------------------------------------------------------------------ internals
     def _cast_ray(self, origin: Vector2, direction: Vector2):
@@ -167,6 +246,166 @@ class RaycastRenderer:
         fog = max(0.2, 1.0 - min(distance / self.view_distance, 1.0) ** 1.2)
         brightness = ambient + light_term
         return max(0.05, min(1.0, brightness * fog))
+
+    # ---------------------------------------------------------------- GPU helpers
+    def _try_init_gpu(self) -> None:
+        if torch is None:
+            self._gpu_enabled = False
+            self._last_gpu_error = "PyTorch not installed"
+            return
+        device: Optional[torch.device] = None
+        if torch.cuda.is_available():  # pragma: no cover - depends on runtime GPU
+            device = torch.device("cuda")
+        elif getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():  # pragma: no cover - macOS
+            device = torch.device("mps")
+        if device is None:
+            self._gpu_enabled = False
+            self._last_gpu_error = "No supported GPU backend found"
+            return
+
+        self._device = device
+        self._gpu_enabled = True
+        self._update_gpu_world_cache()
+        self.resize(self.width, self.height)
+
+    def _update_gpu_world_cache(self) -> None:
+        if not self._gpu_enabled or self._device is None:
+            return
+        width, height = self.world.width, self.world.height
+        solid = torch.zeros((height, width), dtype=torch.bool, device=self._device)
+        colors = torch.zeros((height, width, 3), dtype=torch.float32, device=self._device)
+        for y in range(height):
+            for x in range(width):
+                tile = self.world.tile(x, y)
+                solid[y, x] = tile.solid
+                colors[y, x] = torch.tensor(tile.color, dtype=torch.float32, device=self._device) / 255.0
+        self._tile_solid_gpu = solid
+        self._tile_color_gpu = colors
+
+    def _cast_rays_gpu(
+        self,
+        pos: Vector2,
+        direction: Vector2,
+        plane: Vector2,
+    ) -> tuple[List[Optional[tuple[float, int, int, int, int, int]]], List[Vector2]]:
+        if not self._gpu_enabled or self._device is None:
+            return ([], [])
+        if self._tile_solid_gpu is None:
+            self._update_gpu_world_cache()
+        if self._camera_x_gpu is None or self._camera_x_gpu.numel() != self.width:
+            self._camera_x_gpu = torch.linspace(  # type: ignore[call-arg]
+                -1.0,
+                1.0,
+                steps=self.width,
+                device=self._device,
+                dtype=torch.float32,
+            )
+        camera_x = self._camera_x_gpu
+        ray_dir_x = direction.x + plane.x * camera_x
+        ray_dir_y = direction.y + plane.y * camera_x
+
+        pos_x = torch.full((self.width,), pos.x, dtype=torch.float32, device=self._device)
+        pos_y = torch.full((self.width,), pos.y, dtype=torch.float32, device=self._device)
+        map_x = torch.full((self.width,), int(pos.x), dtype=torch.int32, device=self._device)
+        map_y = torch.full((self.width,), int(pos.y), dtype=torch.int32, device=self._device)
+
+        eps = torch.full((self.width,), 1e-6, dtype=torch.float32, device=self._device)
+        sign_x = torch.sign(ray_dir_x)
+        sign_y = torch.sign(ray_dir_y)
+        sign_x = torch.where(sign_x == 0, torch.ones_like(sign_x), sign_x)
+        sign_y = torch.where(sign_y == 0, torch.ones_like(sign_y), sign_y)
+        dir_x_safe = torch.where(ray_dir_x.abs() < 1e-6, sign_x * eps, ray_dir_x)
+        dir_y_safe = torch.where(ray_dir_y.abs() < 1e-6, sign_y * eps, ray_dir_y)
+        delta_dist_x = torch.abs(1.0 / dir_x_safe)
+        delta_dist_y = torch.abs(1.0 / dir_y_safe)
+
+        neg_one = torch.full((self.width,), -1, dtype=torch.int32, device=self._device)
+        pos_one = torch.full((self.width,), 1, dtype=torch.int32, device=self._device)
+        step_x = torch.where(ray_dir_x < 0, neg_one, pos_one)
+        step_y = torch.where(ray_dir_y < 0, neg_one, pos_one)
+
+        map_x_float = map_x.to(torch.float32)
+        map_y_float = map_y.to(torch.float32)
+        side_dist_x = torch.where(
+            step_x < 0,
+            (pos_x - map_x_float) * delta_dist_x,
+            ((map_x_float + 1.0) - pos_x) * delta_dist_x,
+        )
+        side_dist_y = torch.where(
+            step_y < 0,
+            (pos_y - map_y_float) * delta_dist_y,
+            ((map_y_float + 1.0) - pos_y) * delta_dist_y,
+        )
+
+        hit = torch.zeros((self.width,), dtype=torch.bool, device=self._device)
+        side = torch.zeros((self.width,), dtype=torch.int32, device=self._device)
+        hit_tile_x = torch.zeros((self.width,), dtype=torch.int32, device=self._device)
+        hit_tile_y = torch.zeros((self.width,), dtype=torch.int32, device=self._device)
+
+        max_steps = self._max_gpu_steps
+        for _ in range(max_steps):
+            active = ~hit
+            if not torch.any(active):
+                break
+            choose_x = (side_dist_x < side_dist_y) & active
+            choose_y = (~choose_x) & active
+
+            side_dist_x = side_dist_x + delta_dist_x * choose_x.to(torch.float32)
+            side_dist_y = side_dist_y + delta_dist_y * choose_y.to(torch.float32)
+            map_x = map_x + step_x * choose_x.to(torch.int32)
+            map_y = map_y + step_y * choose_y.to(torch.int32)
+
+            side = torch.where(
+                choose_x,
+                torch.zeros_like(side),
+                torch.where(choose_y, torch.ones_like(side), side),
+            )
+
+            clamp_x = torch.clamp(map_x, 0, self.world.width - 1)
+            clamp_y = torch.clamp(map_y, 0, self.world.height - 1)
+            solid = self._tile_solid_gpu[clamp_y.long(), clamp_x.long()]
+            new_hits = active & solid
+            hit = hit | new_hits
+            hit_tile_x = torch.where(new_hits, clamp_x, hit_tile_x)
+            hit_tile_y = torch.where(new_hits, clamp_y, hit_tile_y)
+
+        map_x_float = map_x.to(torch.float32)
+        map_y_float = map_y.to(torch.float32)
+        step_x_float = step_x.to(torch.float32)
+        step_y_float = step_y.to(torch.float32)
+
+        numerator_x = map_x_float - pos_x + (1 - step_x_float) / 2.0
+        numerator_y = map_y_float - pos_y + (1 - step_y_float) / 2.0
+        distance_x = numerator_x / dir_x_safe
+        distance_y = numerator_y / dir_y_safe
+        distance = torch.where(side == 0, distance_x, distance_y)
+        distance = torch.clamp(distance, min=1e-4)
+
+        hit_cpu = hit.cpu().tolist()
+        distance_cpu = distance.detach().cpu().tolist()
+        tile_x_cpu = hit_tile_x.detach().cpu().tolist()
+        tile_y_cpu = hit_tile_y.detach().cpu().tolist()
+        side_cpu = side.detach().cpu().tolist()
+        step_x_cpu = step_x.detach().cpu().tolist()
+        step_y_cpu = step_y.detach().cpu().tolist()
+        ray_dir_x_cpu = ray_dir_x.detach().cpu().tolist()
+        ray_dir_y_cpu = ray_dir_y.detach().cpu().tolist()
+
+        hits: List[Optional[tuple[float, int, int, int, int, int]]] = [None] * self.width
+        ray_dirs: List[Vector2] = [Vector2() for _ in range(self.width)]
+        for i in range(self.width):
+            ray_dirs[i] = Vector2(ray_dir_x_cpu[i], ray_dir_y_cpu[i])
+            if not hit_cpu[i]:
+                continue
+            hits[i] = (
+                float(distance_cpu[i]),
+                int(tile_x_cpu[i]),
+                int(tile_y_cpu[i]),
+                int(side_cpu[i]),
+                int(step_x_cpu[i]),
+                int(step_y_cpu[i]),
+            )
+        return hits, ray_dirs
 
     def update_time(self, dt: float) -> None:
         if self.day_length <= 0:
