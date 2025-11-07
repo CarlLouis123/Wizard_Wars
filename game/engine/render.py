@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import math
+
 import pygame as pg
 
 from .player import PlayerController
+from .terrain import TerrainSystem
 from .world import TileDefinition, WorldMap
 
 Vector2 = pg.math.Vector2
@@ -13,10 +16,14 @@ Vector2 = pg.math.Vector2
 class RaycastRenderer:
     """Simple first-person raycasting renderer with diffuse lighting and shadows."""
 
-    def __init__(self, world: WorldMap, width: int, height: int) -> None:
+    def __init__(self, world: WorldMap, width: int, height: int, terrain: TerrainSystem) -> None:
         self.world = world
+        self.terrain = terrain
         self.resize(width, height)
         self.view_distance = 24.0
+        self.time_of_day = 0.35
+        self.day_length = 120.0
+        self._sun_strength = 0.5
         self.ambient_light = 0.22
 
     # -------------------------------------------------------------------- sizing
@@ -27,7 +34,8 @@ class RaycastRenderer:
 
     # ------------------------------------------------------------------- drawing
     def render(self, surface: pg.Surface, player: PlayerController) -> None:
-        self._draw_background(surface, player)
+        horizon = self._draw_background(surface, player)
+        self._draw_floor(surface, player, horizon)
         direction = player.direction
         plane = player.camera_plane
         pos = player.position
@@ -148,18 +156,85 @@ class RaycastRenderer:
         brightness = ambient + light_term
         return max(0.05, min(1.0, brightness * fog))
 
-    def _draw_background(self, surface: pg.Surface, player: PlayerController) -> None:
+    def update_time(self, dt: float) -> None:
+        if self.day_length <= 0:
+            return
+        self.time_of_day = (self.time_of_day + dt / self.day_length) % 1.0
+        cycle = math.sin(self.time_of_day * math.tau)
+        daylight = max(0.0, cycle)
+        night = max(0.0, -cycle)
+        self._sun_strength = 0.35 + daylight * 0.65
+        self.ambient_light = 0.12 + daylight * 0.38 + night * 0.08
+        self.world.light_intensity = 1.6 + daylight * 1.4 + night * 0.4
+
+    def _draw_background(self, surface: pg.Surface, player: PlayerController) -> int:
         pitch = player.camera_height_offset
         horizon = int(self.half_height + pitch * self.height)
         horizon = max(0, min(self.height, horizon))
 
-        self._draw_gradient(surface, pg.Rect(0, 0, self.width, horizon), (32, 43, 96), (5, 7, 18))
+        sky_top, sky_bottom = self._sky_colors()
+        self._draw_gradient(surface, pg.Rect(0, 0, self.width, horizon), sky_top, sky_bottom)
+        self._draw_mountains(surface, player, horizon)
         self._draw_gradient(
             surface,
             pg.Rect(0, horizon, self.width, self.height - horizon),
             (18, 20, 26),
             (6, 6, 8),
         )
+        return horizon
+
+    def _draw_mountains(self, surface: pg.Surface, player: PlayerController, horizon: int) -> None:
+        if horizon <= 0:
+            return
+        direction = player.direction
+        plane = player.camera_plane
+        pos = player.position
+        for column in range(self.width):
+            camera_x = 2 * column / self.width - 1
+            ray_dir = direction + plane * camera_x
+            ray_dir.normalize_ip()
+            far_point = pos + ray_dir * self.terrain.mountain_distance
+            height_value = self.terrain.mountain_height(far_point.x, far_point.y)
+            column_height = int((0.45 + max(0.0, height_value)) * self.height * 0.22)
+            start_y = max(0, horizon - column_height)
+            color = self.terrain.mountain_color(height_value, self._sun_strength)
+            if start_y < horizon:
+                pg.draw.line(surface, color, (column, start_y), (column, horizon))
+
+    def _draw_floor(self, surface: pg.Surface, player: PlayerController, horizon: int) -> None:
+        if horizon >= self.height:
+            return
+        direction = player.direction
+        plane = player.camera_plane
+        pos = player.position
+
+        ray_dir_left = direction - plane
+        ray_dir_right = direction + plane
+
+        pos_z = (self.height / 2.0) + player.camera_height_offset * self.height
+        if pos_z <= 0.0:
+            pos_z = 1.0
+
+        surface.lock()
+        try:
+            pixels = pg.PixelArray(surface)
+            map_rgb = surface.map_rgb
+            for screen_y in range(max(horizon, 0), self.height):
+                denom = screen_y - horizon + 0.5
+                if abs(denom) < 1e-5:
+                    continue
+                row_distance = pos_z / denom
+                floor_step = (ray_dir_right - ray_dir_left) * (row_distance / self.width)
+                floor_pos = pos + ray_dir_left * row_distance
+                for screen_x in range(self.width):
+                    sample = self.terrain.sample(
+                        floor_pos.x, floor_pos.y, row_distance, self._sun_strength
+                    )
+                    pixels[screen_x, screen_y] = map_rgb(sample.color)
+                    floor_pos += floor_step
+            del pixels
+        finally:
+            surface.unlock()
 
     def _draw_gradient(
         self,
@@ -178,3 +253,22 @@ class RaycastRenderer:
                 int(top_color[2] + (bottom_color[2] - top_color[2]) * t),
             )
             pg.draw.line(surface, color, (rect.left, rect.top + y), (rect.right, rect.top + y))
+
+    def _sky_colors(self) -> tuple[tuple[int, int, int], tuple[int, int, int]]:
+        day = max(0.0, min(1.0, self._sun_strength - 0.2))
+        top_day = (68, 120, 210)
+        bottom_day = (160, 205, 255)
+        top_night = (8, 10, 25)
+        bottom_night = (18, 22, 40)
+        top_color = _lerp_tuple(top_night, top_day, day)
+        bottom_color = _lerp_tuple(bottom_night, bottom_day, day)
+        return top_color, bottom_color
+
+
+def _lerp_tuple(a: tuple[int, int, int], b: tuple[int, int, int], t: float) -> tuple[int, int, int]:
+    t = max(0.0, min(1.0, t))
+    return (
+        int(a[0] + (b[0] - a[0]) * t),
+        int(a[1] + (b[1] - a[1]) * t),
+        int(a[2] + (b[2] - a[2]) * t),
+    )

@@ -10,6 +10,7 @@ import pygame as pg
 
 from engine.player import MovementInput, PlayerController
 from engine.render import RaycastRenderer
+from engine.terrain import TerrainSystem
 from engine.world import TileDefinition, WorldMap
 import settings as S
 
@@ -59,13 +60,14 @@ class GameApp:
 
         self.config = config
         self.world = WorldMap(MAP_LAYOUT, TILESET, light_position=(7.5, 3.5), light_intensity=2.8)
+        self.terrain = TerrainSystem(seed=2718)
         self.player = PlayerController(
             position=(2.5, 2.5),
             yaw=0.0,
             move_speed=config.move_speed,
             mouse_sensitivity=config.mouse_sensitivity,
         )
-        self.renderer = RaycastRenderer(self.world, *config.resolution)
+        self.renderer = RaycastRenderer(self.world, *config.resolution, terrain=self.terrain)
         self._movement = MovementInput()
         self._mouse_captured = False
         self._toggle_mouse_lock(True)
@@ -111,6 +113,7 @@ class GameApp:
         self._movement.forward = float(keys[pg.K_w]) - float(keys[pg.K_s])
         self._movement.right = float(keys[pg.K_d]) - float(keys[pg.K_a])
         self.player.update(dt, self._movement, self.world)
+        self.renderer.update_time(dt)
 
     def _draw(self) -> None:
         self.renderer.render(self.screen, self.player)
