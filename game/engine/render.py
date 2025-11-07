@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from typing import Iterable
 
 import pygame as pg
 
@@ -33,13 +34,19 @@ class RaycastRenderer:
         self.half_height = self.height // 2
 
     # ------------------------------------------------------------------- drawing
-    def render(self, surface: pg.Surface, player: PlayerController) -> None:
+    def render(
+        self,
+        surface: pg.Surface,
+        player: PlayerController,
+        sprites: Iterable[object] | None = None,
+    ) -> None:
         horizon = self._draw_background(surface, player)
         self._draw_floor(surface, player, horizon)
         direction = player.direction
         plane = player.camera_plane
         pos = player.position
 
+        z_buffer = [float("inf")] * self.width
         for column in range(self.width):
             camera_x = 2 * column / self.width - 1
             ray_dir_x = direction.x + plane.x * camera_x
@@ -54,6 +61,8 @@ class RaycastRenderer:
             if distance <= 0.0:
                 continue
 
+            z_buffer[column] = distance
+
             line_height = int(self.height / distance)
             pitch_offset = int(player.camera_height_offset * self.height)
             draw_start = -line_height // 2 + self.half_height + pitch_offset
@@ -65,6 +74,9 @@ class RaycastRenderer:
             color = self._shade_color(tile, pos, ray_dir, distance, side, step_x, step_y)
             if draw_end_clamped >= draw_start_clamped:
                 pg.draw.line(surface, color, (column, draw_start_clamped), (column, draw_end_clamped))
+
+        if sprites:
+            self._draw_sprites(surface, player, sprites, z_buffer)
 
     # ------------------------------------------------------------------ internals
     def _cast_ray(self, origin: Vector2, direction: Vector2):
@@ -263,6 +275,64 @@ class RaycastRenderer:
         top_color = _lerp_tuple(top_night, top_day, day)
         bottom_color = _lerp_tuple(bottom_night, bottom_day, day)
         return top_color, bottom_color
+
+    def _draw_sprites(
+        self,
+        surface: pg.Surface,
+        player: PlayerController,
+        sprites: Iterable[object],
+        z_buffer: list[float],
+    ) -> None:
+        plane = player.camera_plane
+        direction = player.direction
+        pos = player.position
+        determinant = plane.x * direction.y - direction.x * plane.y
+        if abs(determinant) < 1e-6:
+            determinant = 1e-6
+        inv_det = 1.0 / determinant
+        pitch_offset = int(player.camera_height_offset * self.height)
+
+        # Sort sprites by distance descending for painter's algorithm fallback.
+        sortable = []
+        for sprite in sprites:
+            if not hasattr(sprite, "x") or not hasattr(sprite, "sprite"):
+                continue
+            dx = float(sprite.x) - pos.x
+            dy = float(sprite.y) - pos.y
+            distance_sq = dx * dx + dy * dy
+            sortable.append((distance_sq, sprite))
+        sortable.sort(key=lambda entry: entry[0], reverse=True)
+
+        for _, sprite in sortable:
+            sprite_surface = sprite.sprite
+            sprite_x = float(sprite.x) - pos.x
+            sprite_y = float(sprite.y) - pos.y
+
+            transform_x = inv_det * (direction.y * sprite_x - direction.x * sprite_y)
+            transform_y = inv_det * (-plane.y * sprite_x + plane.x * sprite_y)
+            if transform_y <= 0:
+                continue
+
+            sprite_screen_x = int((self.width / 2) * (1 + transform_x / transform_y))
+            sprite_height = abs(int(self.height / transform_y))
+            sprite_width = sprite_height
+            draw_start_y = -sprite_height // 2 + self.half_height + pitch_offset
+            draw_end_y = sprite_height // 2 + self.half_height + pitch_offset
+            draw_start_x = sprite_screen_x - sprite_width // 2
+            draw_end_x = sprite_screen_x + sprite_width // 2
+
+            if draw_end_x < 0 or draw_start_x >= self.width:
+                continue
+
+            if 0 <= sprite_screen_x < self.width:
+                if transform_y >= z_buffer[sprite_screen_x] + 0.2:
+                    continue
+
+            scaled_sprite = pg.transform.smoothscale(sprite_surface, (sprite_width, sprite_height))
+            dest_rect = scaled_sprite.get_rect()
+            dest_rect.centerx = sprite_screen_x
+            dest_rect.bottom = draw_end_y
+            surface.blit(scaled_sprite, dest_rect)
 
 
 def _lerp_tuple(a: tuple[int, int, int], b: tuple[int, int, int], t: float) -> tuple[int, int, int]:
