@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections import OrderedDict
 from dataclasses import dataclass
 
 
@@ -41,9 +42,26 @@ class TerrainSystem:
         self.seed = seed
         self.scale = scale
         self.mountain_distance = 64.0
+        # Terrain shading is evaluated thousands of times per frame. The
+        # underlying noise functions are comparatively expensive, so we cache
+        # quantised lookups to drastically cut down the number of evaluations.
+        # An ordered dict keeps the memory footprint bounded while providing a
+        # lightweight manual LRU cache.
+        self._sample_cache: "OrderedDict[tuple[int, int, int, int], TerrainSample]" = OrderedDict()
+        self._cache_limit = 50_000
+        self._cache_scale_xy = 4.0  # 0.25 world unit precision
+        self._cache_scale_distance = 12.0  # ~0.08 precision
+        self._cache_scale_light = 24.0  # ~0.04 precision
 
     # ----------------------------------------------------------------- sampling
     def sample(self, wx: float, wy: float, distance: float, light: float) -> TerrainSample:
+        key = self._quantise_sample(wx, wy, distance, light)
+        cached = self._sample_cache.get(key)
+        if cached is not None:
+            # Refresh position to maintain simple LRU behaviour.
+            self._sample_cache.move_to_end(key)
+            return cached
+
         height = self._height(wx, wy)
 
         river = self._river_mask(wx, wy)
@@ -68,7 +86,27 @@ class TerrainSystem:
         shade *= fog * light
         shade = max(0.1, min(1.0, shade))
         shaded_color = tuple(int(component * shade) for component in base_color)
-        return TerrainSample(shaded_color, height)
+        sample = TerrainSample(shaded_color, height)
+        self._store_sample_cache(key, sample)
+        return sample
+
+    def _quantise_sample(
+        self, wx: float, wy: float, distance: float, light: float
+    ) -> tuple[int, int, int, int]:
+        qx = int(wx * self._cache_scale_xy)
+        qy = int(wy * self._cache_scale_xy)
+        qd = int(distance * self._cache_scale_distance)
+        ql = int(light * self._cache_scale_light)
+        return (qx, qy, qd, ql)
+
+    def _store_sample_cache(
+        self, key: tuple[int, int, int, int], sample: TerrainSample
+    ) -> None:
+        cache = self._sample_cache
+        cache[key] = sample
+        cache.move_to_end(key)
+        if len(cache) > self._cache_limit:
+            cache.popitem(last=False)
 
     def mountain_height(self, wx: float, wy: float) -> float:
         """Approximate skyline elevation for distant mountains."""
